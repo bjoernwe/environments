@@ -20,11 +20,11 @@ class EnvCube(environment.Environment):
         ndim:        int - dimensionality of the generated cube
         seed:        int - 
         """
-        super(EnvCube, self).__init__(seed=seed)
-        self.ndim = ndim
-        self.noisy_dim_dist = 'uniform'
+        super(EnvCube, self).__init__(ndim = 2, 
+                                      initial_state = .5 * np.ones(ndim), 
+                                      noisy_dim_dist = environment.Noise.uniform, 
+                                      seed = seed)
         self.sigma = sigma
-        self.current_state = .5 * np.ones(ndim)
         return
     
     

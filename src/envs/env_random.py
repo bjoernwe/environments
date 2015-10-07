@@ -2,17 +2,19 @@ import matplotlib.pyplot as plt
 
 import environment
 
+from environment import Noise
+
 
 class EnvRandom(environment.Environment):
 
-    def __init__(self, ndim=1, noise_dist='normal', seed=None):
+    def __init__(self, ndim=1, noise_dist=Noise.normal, seed=None):
         """
         Initializes the environment including an initial state.
         """
-        super(EnvRandom, self).__init__(seed=seed)
-        self.ndim = ndim
-        self.noisy_dim_dist = noise_dist
-        self.actions = None
+        super(EnvRandom, self).__init__(ndim = ndim,
+                                        initial_state = 0.0,
+                                        noisy_dim_dist = Noise.normal,
+                                        seed=seed)
         self.current_state = self._noise()
         
         
@@ -21,11 +23,11 @@ class EnvRandom(environment.Environment):
         Creates new noise. 
         """
         noise = None
-        if self.noisy_dim_dist == 'normal':
+        if self.noisy_dim_dist == Noise.normal:
             noise = self.rnd.randn(self.ndim)
-        elif self.noisy_dim_dist == 'uniform':
+        elif self.noisy_dim_dist == Noise.uniform:
             noise = self.rnd.rand(self.ndim)
-        elif self.noisy_dim_dist == 'binary':
+        elif self.noisy_dim_dist == Noise.binary:
             noise = self.rnd.randint(2, size=self.ndim)
         else:
             print 'I do not understand noisy_dim_dist ==', self.noisy_dim_dist

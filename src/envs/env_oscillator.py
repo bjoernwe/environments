@@ -15,11 +15,11 @@ class EnvOscillator(environment.Environment):
         Parameters:
         seed:        int - 
         """
-        super(EnvOscillator, self).__init__(seed=seed)
-        self.ndim = ndim
+        super(EnvOscillator, self).__init__(ndim = ndim,
+                                            initial_state = np.zeros(ndim),
+                                            noisy_dim_dist = environment.Noise.binary,
+                                            seed=seed)
         self.transition_prob = transition_prob
-        self.noisy_dim_dist = 'binary'
-        self.current_state = np.zeros(ndim)
         self.counter = 0
         return
     

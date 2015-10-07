@@ -9,14 +9,13 @@ class EnvRibbon(environment.Environment):
     eight)."""
 
     def __init__(self, step_size=1, sigma_noise=.05, seed=None):
-        super(EnvRibbon, self).__init__(seed=seed)
-        
-        self.ndim = 2
-        self.noisy_dim_dist = 'uniform'
+        super(EnvRibbon, self).__init__(ndim = 2,
+                                        initial_state = 0,
+                                        actions_dict = {0: 'NONE'},
+                                        noisy_dim_dist = environment.Noise.uniform,
+                                        seed=seed)
         self.step_size = step_size
         self.sigma_noise = sigma_noise
-        self.actions_dict = {0: 'NONE'}
-        
         self.phi = 0
         self.current_state = self._render(self.phi)
         return

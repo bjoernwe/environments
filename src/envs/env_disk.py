@@ -19,18 +19,17 @@ class EnvDisk(environment.Environment):
         sigma_rad:   float - standard deviation for radial changes
         seed:        int - 
         """
-        super(EnvDisk, self).__init__(seed=seed)
-        
-        self.ndim = 2
-        self.noisy_dim_dist = 'uniform'
         self.sigma_phi = sigma_phi
         self.sigma_rad = sigma_rad
-        self.actions_dict = {0: 'PHI', 1: 'RAD'}
         
         self.phi = 0
         self.rad = .5
 
-        self.current_state = self._render(self.phi, self.rad)
+        super(EnvDisk, self).__init__(ndim = 2,
+                                      initial_state = self._render(self.phi, self.rad),
+                                      actions_dict = {0: 'PHI', 1: 'RAD'},
+                                      noisy_dim_dist = environment.Noise.uniform,
+                                      seed=seed)
         return
     
     

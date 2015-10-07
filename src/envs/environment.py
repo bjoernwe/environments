@@ -1,8 +1,11 @@
 import collections
+import enum
 import numpy as np
 
 import mdp
 
+
+Noise = enum.Enum('Noise', 'normal uniform binary')
 
 
 class Environment(object):
@@ -16,14 +19,14 @@ class Environment(object):
     '''
 
 
-    def __init__(self, seed=None):
+    def __init__(self, ndim, initial_state, actions_dict={0: None}, noisy_dim_dist=Noise.uniform, seed=None):
         """
         Initializes the environment including an initial state.
         """
-        self.ndim = None                # initialize in sub-class
-        self.actions_dict = {0: None}   # initialize in sub-class
-        self.current_state = None       # initialize in sub-class
-        self.noisy_dim_dist = None      # initialize in sub-class
+        self.ndim = ndim
+        self.actions_dict = actions_dict
+        self.noisy_dim_dist = noisy_dim_dist
+        self.current_state = initial_state
         self.last_action = None
         self.last_reward = None
         self.rnd = np.random.RandomState(seed)
@@ -144,14 +147,11 @@ class Environment(object):
     
             # add noisy dim
             for _ in range(noisy_dims):
-                if self.noisy_dim_dist is None:
-                    print 'No default distribution set for noisy dimension (noisy_dim_dist). Assuming normal.'
+                if self.noisy_dim_dist == Noise.normal:
                     noise = self.rnd.randn(N)
-                elif self.noisy_dim_dist == 'normal':
-                    noise = self.rnd.randn(N)
-                elif self.noisy_dim_dist == 'uniform':
+                elif self.noisy_dim_dist == Noise.uniform:
                     noise = self.rnd.rand(N)
-                elif self.noisy_dim_dist == 'binary':
+                elif self.noisy_dim_dist == Noise.binary:
                     noise = self.rnd.randint(2, size=N)
                 else:
                     print 'I do not understand noisy_dim_dist ==', self.noisy_dim_dist

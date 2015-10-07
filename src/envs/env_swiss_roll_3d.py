@@ -11,32 +11,30 @@ class EnvSwissRoll3D(environment.Environment):
     normal noise to the angle phi and the depth z in every time step.
     """
 
+    threepi = 3. * np.pi
+
     def __init__(self, sigma_phi=1, sigma_z=0.1, seed=None):
         """
         Initializes the environment including an initial state.
         """
-        super(EnvSwissRoll3D, self).__init__(seed=seed)
-            
-        self.ndim = 3
-        self.noisy_dim_dist = 'uniform'
-        self.actions = None
-        
         self.sigma_phi = sigma_phi
         self.sigma_z = sigma_z
-        self.threepi = 3. * np.pi
-        
         self.phi = self.threepi / 2.
         self.z = 0.5
-        self.current_state = np.hstack([self._f(self.phi), self.z])
+        super(EnvSwissRoll3D, self).__init__(ndim = 3,
+                                             initial_state = np.hstack([self._f(self.phi), self.z]),
+                                             noisy_dim_dist = environment.Noise.uniform,
+                                             seed=seed)
         return
         
-        
-    def _f(self, phi):
+
+    @classmethod        
+    def _f(cls, phi):
         """
         Maps an angle phi to x, y values of the swiss roll.
         """
-        x = np.cos(phi)*(1-.7*phi/self.threepi)
-        y = np.sin(phi)*(1-.7*phi/self.threepi)
+        x = np.cos(phi)*(1-.7*phi/cls.threepi)
+        y = np.sin(phi)*(1-.7*phi/cls.threepi)
         return np.array([x, y])
         
 

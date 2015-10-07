@@ -17,12 +17,12 @@ class EnvDeadCorners(environment.Environment):
         ndim:        int - dimensionality of the generated cube
         seed:        int - 
         """
-        super(EnvDeadCorners, self).__init__(seed=seed)
-        self.ndim = ndim
-        self.noisy_dim_dist = 'uniform'
+        super(EnvDeadCorners, self).__init__(ndim = ndim,
+                                             initial_state = np.zeros(ndim),
+                                             noisy_dim_dist = environment.Noise.uniform, 
+                                             seed=seed)
         self.sigma = sigma
         self.corner_size = corner_size
-        self.current_state = np.zeros(ndim)
         return
     
     
@@ -46,7 +46,7 @@ class EnvDeadCorners(environment.Environment):
         dists_to_corners = 1 - np.abs(self.current_state)
         if np.all(dists_to_corners < self.corner_size):
             self.current_state = np.zeros(self.ndim)
-            print 'reset'
+            #print 'reset'
         return self.current_state, 0
 
 

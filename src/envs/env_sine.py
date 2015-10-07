@@ -14,11 +14,11 @@ class EnvSine(environment.Environment):
         Parameters:
         seed:        int - 
         """
-        super(EnvSine, self).__init__(seed=seed)
-        self.ndim = 1
-        self.noisy_dim_dist = 'uniform'
+        super(EnvSine, self).__init__(ndim = 1,
+                                      initial_state = np.sin(0),
+                                      noisy_dim_dist = environment.Noise.uniform,
+                                      seed=seed)
         self.counter = 0
-        self.current_state = np.sin(self.counter)
         return
     
     

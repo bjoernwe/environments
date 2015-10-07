@@ -6,32 +6,33 @@ import environment
 
 class EnvSwissRoll(environment.Environment):
 
+    fourpi = 4. * np.pi
+
     def __init__(self, sigma=0.5, seed=None):
         """
         Initializes the environment including an initial state.
         """
-        super(EnvSwissRoll, self).__init__(seed=seed)
+        self.sigma = sigma
+        self.t = EnvSwissRoll.fourpi / 2.
+        super(EnvSwissRoll, self).__init__(ndim = 2,
+                                           initial_state = self._f(self.t),
+                                           noisy_dim_dist = environment.Noise.uniform,
+                                           seed = seed)
         #self.rnd = random.Random()
         #if seed is not None:
         #    self.rnd.seed(seed)
             
-        self.ndim = 2
-        self.noisy_dim_dist = 'uniform'
-        self.actions = None
+        #self.actions = None
+        #self.current_state = self._f(self.t)
         
-        self.sigma = sigma
-        self.threepi = 4. * np.pi
-        
-        self.t = self.threepi / 2.
-        self.current_state = self._f(self.t)
-        
-        
-    def _f(self, phi):
+    
+    @classmethod    
+    def _f(cls, phi):
         """
         Maps an angle phi to x, y values of the swiss roll.
         """
-        x = np.cos(phi)*(1-.7*phi/self.threepi)
-        y = np.sin(phi)*(1-.7*phi/self.threepi)
+        x = np.cos(phi)*(1-.7*phi/cls.fourpi)
+        y = np.sin(phi)*(1-.7*phi/cls.fourpi)
         return np.array([x, y])
         
 
@@ -42,12 +43,11 @@ class EnvSwissRoll(environment.Environment):
         """
 
         # random walk
-        #self.t += self.t * self.rnd.gauss(mu=0, sigma=1) / self.threepi
+        #self.t += self.t * self.rnd.gauss(mu=0, sigma=1) / self.fourpi
         self.t += self.sigma * self.rnd.normal()
         
         # bounds
-        self.t = 0 if self.t < 0 else self.t 
-        self.t = self.threepi if self.t > self.threepi else self.t
+        self.t = np.clip(self.t, 0, self.fourpi)
         
         # result
         self.current_state = self._f(self.t)
