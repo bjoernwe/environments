@@ -2,6 +2,7 @@ import numpy as np
 import unittest
 
 import env_cube
+import env_dead_corners
 import env_disk
 import env_face
 import env_oscillator
@@ -18,6 +19,7 @@ class EnvironmentTest(unittest.TestCase):
     def setUpClass(self):
         self.environments = []
         self.environments.append(env_cube.EnvCube)    
+        self.environments.append(env_dead_corners.EnvDeadCorners)    
         self.environments.append(env_disk.EnvDisk)    
         self.environments.append(env_face.EnvFace)    
         self.environments.append(env_oscillator.EnvOscillator)    
