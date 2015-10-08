@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 
 import environment
@@ -15,10 +16,10 @@ class EnvKai(environment.Environment):
         Parameters:
         seed:        int - 
         """
-        super(EnvKai, self).__init__(seed=seed)
-        self.ndim = 2
-        self.noisy_dim_dist = 'normal'
-        self.current_state = self.rnd.normal(size=2)
+        super(EnvKai, self).__init__(ndim = 2,
+                                     initial_state = np.zeros(2),
+                                     noisy_dim_dist = environment.Noise.normal,
+                                     seed=seed)
         return
     
     

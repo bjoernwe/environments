@@ -9,19 +9,19 @@ class EnvLadder(environment.Environment):
     reset.
     """
 
-    def __init__(self, num_states, max_steps=1, allow_stay=False, seed=None):
+    def __init__(self, num_states=10, max_steps=1, allow_stay=False, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
         seed:        int - 
         """
-        super(EnvLadder, self).__init__(seed=seed)
-        self.ndim = 1
+        super(EnvLadder, self).__init__(ndim = 1,
+                                        initial_state = 0,
+                                        noisy_dim_dist = environment.Noise.uniform,
+                                        seed = seed)
         self.num_states = num_states
         self.max_steps = max_steps
         self.allow_stay = allow_stay
-        self.noisy_dim_dist = 'uniform'
-        self.current_state = 0
         return
     
     

@@ -17,12 +17,13 @@ class EnvRatlab(environment.Environment):
         Parameters:
         seed:        int - 
         """
-        super(EnvRatlab, self).__init__(seed=seed)
-        self.noisy_dim_dist = 'normal'
         self.video = np.load(os.path.dirname(__file__) + '/ratlab.npy')
         self.n_frames, self.ndim = self.video.shape
+        super(EnvRatlab, self).__init__(ndim = self.ndim,
+                                        initial_state = self.video[0],
+                                        noisy_dim_dist = environment.Noise.normal,
+                                        seed = seed)
         self.counter = 0
-        self.current_state = self.video[self.counter]
         return
     
     
@@ -53,6 +54,8 @@ def main():
     nx = 40
     ny = 320
     env = EnvRatlab()
+    
+    print env.generate_training_data(num_steps=100, noisy_dims=2)
 
     fig = plt.figure()
     data = 255 - np.reshape(env.current_state, (nx, ny))

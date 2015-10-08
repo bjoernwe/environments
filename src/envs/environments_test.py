@@ -5,8 +5,11 @@ import env_cube
 import env_dead_corners
 import env_disk
 import env_face
+import env_kai
+import env_ladder
 import env_oscillator
 import env_random
+import env_ratlab
 import env_ribbon
 import env_sine
 import env_swiss_roll
@@ -22,8 +25,11 @@ class EnvironmentTest(unittest.TestCase):
         self.environments.append(env_dead_corners.EnvDeadCorners)    
         self.environments.append(env_disk.EnvDisk)    
         self.environments.append(env_face.EnvFace)    
+        self.environments.append(env_kai.EnvKai)    
+        self.environments.append(env_ladder.EnvLadder)    
         self.environments.append(env_oscillator.EnvOscillator)    
         self.environments.append(env_random.EnvRandom)    
+        #self.environments.append(env_ratlab.EnvRatlab)    
         self.environments.append(env_ribbon.EnvRibbon)    
         self.environments.append(env_sine.EnvSine)    
         self.environments.append(env_swiss_roll.EnvSwissRoll)    
