@@ -28,7 +28,7 @@ class EnvMarioRGB(environment.Environment):
     """
     path_to_mario = '../../../../MarioAI Java'
     
-    def __init__(self, seed=None, background=True, greyscale=False):
+    def __init__(self, seed=None, background=True, grayscale=False):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -36,23 +36,7 @@ class EnvMarioRGB(environment.Environment):
         greyscale:    boolean - indicates if image data is converted to RGB or greyscale values
         """
         
-        self.greyscale              = greyscale
-        
-        super(EnvMarioRGB, self).__init__(ndim=320*240,
-                                          initial_state = None, 
-                                          actions_dict = {0: 'LEFT', 
-                                                          1: 'RIGHT', 
-                                                          2: 'JUMP', 
-                                                          3: 'STAND', 
-                                                          4: 'DUCK', 
-                                                          5: 'RUN_LEFT',
-                                                          6: 'RUN_RIGHT', 
-                                                          7: 'JUMP_LEFT', 
-                                                          8: 'JUMP_RIGHT', 
-                                                          9: 'RUN_SHOOT', 
-                                                          10: 'JUMP/RUN'}, 
-                                          noisy_dim_dist=environment.Noise.uniform, 
-                                          seed=seed)
+        self.grayscale              = grayscale
         
         # Initialization of the AmiCo Simulation is adopted from the MarioAI benchmark
         print "Py: AmiCo Simulation Started:"
@@ -88,37 +72,32 @@ class EnvMarioRGB(environment.Environment):
         self.getObservationDetails  = cfunc('getObservationDetails', self.libamico, ctypes.py_object)
         self.getVisualRGB           = cfunc('getVisualRGB', self.libamico, ctypes.py_object)
         self.getIntermediateReward  = cfunc('getIntermediateReward', self.libamico, ctypes.c_int)
-        
-        #self.last_reward            = self.getIntermediateReward()
-    
-#         options = ""
-#         if len(sys.argv) > 1:
-#             options = sys.argv[1]
-# 
-#         if options.startswith('"') and options.endswith('"'):
-#             options = options[1:-1]
-#             
-#         self.options1               = options + " -ls "
-#         options1                    = self.options1 #+ str(self.seed)
-# 
-#         print options1
+
+        # initial state        
         self.reset('')
-        #print self.getIntermediateReward()
-        # make first step to complete initialization
-        #obsDetails = self.getObservationDetails()
-        #self._setObservationDetails(obsDetails[0], obsDetails[1], obsDetails[2], obsDetails[3])
-        #obs = self.getEntireObservation(1, 0)
-        #self._integrateObservation(obs[0], obs[1], obs[2], obs[3], obs[4])
-        self.current_state = self._transformImageToRGB()
-        self.ndim = self.current_state.shape[0]
-        print self.current_state.shape
-        
         self.libamico.tick()
-            
+        initial_state = self._transformImageToRGB()
+        ndim = self.current_state.shape[0]
+
+        super(EnvMarioRGB, self).__init__(ndim=ndim,
+                                          initial_state = initial_state, 
+                                          actions_dict = {0: 'LEFT', 
+                                                          1: 'RIGHT', 
+                                                          2: 'JUMP', 
+                                                          3: 'STAND', 
+                                                          4: 'DUCK', 
+                                                          5: 'RUN_LEFT',
+                                                          6: 'RUN_RIGHT', 
+                                                          7: 'JUMP_LEFT', 
+                                                          8: 'JUMP_RIGHT', 
+                                                          9: 'RUN_SHOOT', 
+                                                          10: 'JUMP/RUN'}, 
+                                          noisy_dim_dist=environment.Noise.uniform, 
+                                          seed=seed)
         return
 
     
-    def _translate(self, action):
+    def _translate_action(self, action):
         """Translate a given action into a list representation
         --------------------------------------
         Parameters:
@@ -153,21 +132,7 @@ class EnvMarioRGB(environment.Environment):
         
         assert False
     
-    
-#     def _calculateReward(self):
-#         """Return difference between current and previous reward
-#         --------------------------------------
-#         Return:
-#         self.last_reward:    int
-#         """
-#         
-#         return self.getIntermediateReward()
-#         self.current_reward     = self.getIntermediateReward()
-#         self.last_reward        = self.current_reward - self.previous_reward
-#         self.previous_reward    = self.current_reward
-#         
-#         return self.last_reward
-            
+
     
     def _do_action(self, action):
         """Perform the given action and return it as well as the resulting state of the
@@ -183,29 +148,16 @@ class EnvMarioRGB(environment.Environment):
 
         # reset Mario to start position if level is finished or Mario is dead
         if (self.isLevelFinished() == True or self.getMarioStatus() == 0):
-            #options1 = self.options1# + str(seed)
             self.reset('-ls')
 
-        assert action is not None
-        #if action == None:
-        #    choice = random.randint(0,len(self.actions)-1)
-        #    action = self.actions[choice]
-        
         # translate action into list which can be processed by self.performAction,
         # perform the translated action and advance the environment by 1 tick
-        translatedAction = self._translate(action)
+        translatedAction = self._translate_action(action)
         self.performAction(translatedAction)
-        
         self.libamico.tick()
-        #obsDetails = self.getObservationDetails()
-        #self._setObservationDetails(obsDetails[0], obsDetails[1], obsDetails[2], obsDetails[3])
-        #obs = self.getEntireObservation(1, 0)
-        
-        # self._integrateObservation also stores the data of the observation in self.current_state
-        #self._integrateObservation(obs[0], obs[1], obs[2], obs[3], obs[4])
-        self.current_state = self._transformImageToRGB()
+        current_state = self._transformImageToRGB()
         reward = self.getIntermediateReward()
-        return (self.current_state, reward)
+        return (current_state, reward)
     
     
     def _transformImageToRGB(self):
@@ -214,16 +166,13 @@ class EnvMarioRGB(environment.Environment):
         Return:
         self.current_state:    np.ndarray - stores the RGB values of the current snapshot
         """
-        RGB = self.getVisualRGB()
+        RGB = np.array(self.getVisualRGB(), dtype=int)
         N = len(RGB)
         
-        if self.greyscale == True:
-            self.current_state = np.zeros(N)
-            for i in range(N):
-                self.current_state[i] = (int(0.21 * ((RGB[i] >> 16) & 0xFF)
-                                           + 0.71 * ((RGB[i] >>  8) & 0xFF)
-                                           + 0.07 * ((RGB[i] >>  0) & 0xFF)))
-   
+        if self.grayscale == True:
+            self.current_state = 0.21 * ((RGB >> 16) & 0xFF) \
+                               + 0.71 * ((RGB >>  8) & 0xFF) \
+                               + 0.08 * ((RGB >>  0) & 0xFF)
         else:
             self.current_state = np.zeros(3*N)
             for i in range(N):
@@ -264,8 +213,11 @@ def cfunc(name, dll, result, * args):
 
 
 if __name__ == '__main__':
-    env = EnvMarioRGB(background=True, greyscale=True)
-    img = env.generate_training_data(num_steps=100, whitening=False)[0][0][-1].reshape((240, 320))
-    plt.imshow(img)
+    env = EnvMarioRGB(background=True, grayscale=True)
+    result = env.generate_training_data(num_steps=100, whitening=False)
+    print result
+    img = result[0][0][-1].reshape((240, 320))
+    #img = env.current_state.reshape((240, 320))
+    plt.imshow(img, cmap=plt.cm.get_cmap('gray'))
     plt.show()
     
