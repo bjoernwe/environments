@@ -78,7 +78,7 @@ class EnvMarioRGB(environment.Environment):
         self.reset('')
         self.libamico.tick()
         initial_state = self._transformImageToRGB()
-        ndim = self.current_state.shape[0]
+        ndim = initial_state.shape[0]
 
         super(EnvMarioRGB, self).__init__(ndim=ndim,
                                           initial_state = initial_state, 
@@ -168,21 +168,24 @@ class EnvMarioRGB(environment.Environment):
         self.current_state:    np.ndarray - stores the RGB values of the current snapshot
         """
         RGB = np.array(self.getVisualRGB(), dtype=int)
-        N = len(RGB)
         
         if self.grayscale == True:
-            self.current_state = 0.21 * ((RGB >> 16) & 0xFF) \
+            current_state = 0.21 * ((RGB >> 16) & 0xFF) \
                                + 0.71 * ((RGB >>  8) & 0xFF) \
                                + 0.08 * ((RGB >>  0) & 0xFF)
         else:
-            self.current_state = np.zeros(3*N)
-            for i in range(N):
-                j = 3*i
-                self.current_state[j+0] = ((RGB[i] >> 16) & 0xFF)
-                self.current_state[j+1] = ((RGB[i] >>  8) & 0xFF)
-                self.current_state[j+2] = ((RGB[i] <<  0) & 0xFF)
+            N = len(RGB)
+            current_state = np.zeros(3*N, dtype=int)
+            current_state[0::3] = ((RGB >> 16) & 0xFF)
+            current_state[1::3] = ((RGB >>  8) & 0xFF)
+            current_state[2::3] = ((RGB)       & 0xFF)
+            #for i in range(N):
+            #    j = 3*i
+            #    self.current_state[j+0] = ((RGB[i] >> 16) & 0xFF)
+            #    self.current_state[j+1] = ((RGB[i] >>  8) & 0xFF)
+            #    self.current_state[j+2] = ((RGB[i] <<  0) & 0xFF)
             
-        return self.current_state
+        return current_state
     
 
 # MarioAI class        
@@ -217,17 +220,24 @@ if __name__ == '__main__':
 
     nx = 240
     ny = 320
-    env = EnvMarioRGB(background=True, grayscale=True)
+    env = EnvMarioRGB(background=True, grayscale=False)
+
+    def transform(img):
+        result = np.zeros((nx, ny, 3), dtype=float)
+        result[:,:,0] = img[0::3].reshape((nx, ny)) / 255.
+        result[:,:,1] = img[1::3].reshape((nx, ny)) / 255.
+        result[:,:,2] = img[2::3].reshape((nx, ny)) / 255.
+        return result
 
     fig = plt.figure()
-    data = np.reshape(env.current_state, (nx, ny))
-    im = plt.imshow(data, cmap='gist_gray', vmin=0, vmax=255)
+    data = transform(env.current_state)
+    im = plt.imshow(data)#, cmap='gist_gray')#, vmin=0, vmax=255)
 
     def init():
         im.set_data(np.zeros((nx, ny)))
     
     def animate(i):
-        data = np.reshape(env.do_action()[0], (nx, ny))
+        data = transform(env.do_action()[0])
         im.set_data(data)
         return im
     
