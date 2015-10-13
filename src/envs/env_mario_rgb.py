@@ -42,14 +42,17 @@ class EnvMarioRGB(environment.Environment):
         
         super(EnvMarioRGB, self).__init__(ndim=320*240,
                                           initial_state = None, 
-                                          actions_dict={0: 'RIGHT', 
-                                                        1: 'JUMP', 
-                                                        2: 'STAND', 
-                                                        3: 'DUCK', 
-                                                        4: 'RUN_RIGHT', 
-                                                        5: 'JUMP_RIGHT', 
-                                                        6: 'RUN/SHOOT', 
-                                                        7: 'JUMP/RUN'}, 
+                                          actions_dict = {0: 'LEFT', 
+                                                          1: 'RIGHT', 
+                                                          2: 'JUMP', 
+                                                          3: 'STAND', 
+                                                          4: 'DUCK', 
+                                                          5: 'RUN_LEFT',
+                                                          6: 'RUN_RIGHT', 
+                                                          7: 'JUMP_LEFT', 
+                                                          8: 'JUMP_RIGHT', 
+                                                          9: 'RUN_SHOOT', 
+                                                          10: 'JUMP/RUN'}, 
                                           noisy_dim_dist=environment.Noise.uniform, 
                                           seed=seed)
         
@@ -70,61 +73,61 @@ class EnvMarioRGB(environment.Environment):
 #         self.levelScene             = None
 #         self.enemiesScene           = None
         
-        self.receptiveFieldHeight   = 19
-        self.receptiveFieldWidth    = 19
-        self.action                 = [0, 0, 0, 0, 0, 0]
-        self.current_reward         = 0
-        self.previous_reward        = 0
-        self.last_reward            = 0
+#         self.receptiveFieldHeight   = 19
+#         self.receptiveFieldWidth    = 19
+#         self.action                 = [0, 0, 0, 0, 0, 0]
+#         self.current_reward         = 0
+#         self.previous_reward        = 0
+#         self.last_reward            = 0
         
         #self.actions               = ['RIGHT', 'LEFT', 'RUN_RIGHT', 'RUN_LEFT', 'JUMP', 'STAND', 'DUCK', 'JUMP_LEFT' 
         #                              'JUMP_RIGHT', 'RUN/SHOOT', 'JUMP/RUN']
-        self.actions                = ['RIGHT', 'JUMP', 'STAND', 'DUCK', 'RUN_RIGHT', 'JUMP_RIGHT', 'RUN/SHOOT', 'JUMP/RUN']
+        #self.actions                = ['RIGHT', 'JUMP', 'STAND', 'DUCK', 'RUN_RIGHT', 'JUMP_RIGHT', 'RUN/SHOOT', 'JUMP/RUN']
         
         
-        self.current_state          = []
-        self.mario_labels           = []
-        self.levelScene_labels      = []
-        self.enemies_labels         = []
+#         self.current_state          = []
+#         self.mario_labels           = []
+#         self.levelScene_labels      = []
+#         self.enemies_labels         = []
         
         # Initialization of the AmiCo Simulation is adopted from the MarioAI benchmark
         print "Py: AmiCo Simulation Started:"
         print "library found: "
         print "Platform: ", sys.platform
-        if (sys.platform == 'linux2'):
         ##########################################
         # find_library on Linux could only be used if your libAmiCoPyJava.so is
         # on system search path or path to the library is added in to LD_LIBRARY_PATH
         #
         ##########################################
+        if (sys.platform == 'linux2'):
             loadName = self.path_to_mario + '/bin/AmiCoBuild/PyJava/libAmiCoPyJava.so'
-            libamico = ctypes.CDLL(loadName)
-            print libamico
+            self.libamico = ctypes.CDLL(loadName)
+            #print libamico
         else: #else if OS is a Mac OS X (libAmiCo.dylib is searched for) or Windows (AmiCo.dll)
             name =  'AmiCoPyJava'
             loadName = ctypes.util.find_library(name)
             print loadName
-            libamico = ctypes.CDLL(loadName)
-            print libamico
+            self.libamico = ctypes.CDLL(loadName)
+            #print libamico
             
-        self.libamico = libamico
+        #self.libamico = libamico
     
         # create environment
         javaClass = "ch/idsia/benchmark/mario/environments/MarioEnvironment"
-        libamico.amicoInitialize(1, "-Djava.class.path=" + self.path_to_mario + os.path.sep + "bin" + os.path.sep + ":jdom.jar")
-        libamico.createMarioEnvironment(javaClass)
+        self.libamico.amicoInitialize(1, "-Djava.class.path=" + self.path_to_mario + os.path.sep + "bin" + os.path.sep + ":jdom.jar")
+        self.libamico.createMarioEnvironment(javaClass)
     
         # specify necessary cfuncs
-        self.reset                  = cfunc('reset', libamico, None, ('list', ListPOINTER(ctypes.c_int), 1))
-        self.isLevelFinished        = cfunc('isLevelFinished', libamico, ctypes.c_bool)
-        self.getMarioStatus         = cfunc('getMarioStatus', libamico, ctypes.c_int)
-        self.getEntireObservation   = cfunc('getEntireObservation', libamico, ctypes.py_object,
+        self.reset                  = cfunc('reset', self.libamico, None, ('list', ListPOINTER(ctypes.c_int), 1))
+        self.isLevelFinished        = cfunc('isLevelFinished', self.libamico, ctypes.c_bool)
+        self.getMarioStatus         = cfunc('getMarioStatus', self.libamico, ctypes.c_int)
+        self.getEntireObservation   = cfunc('getEntireObservation', self.libamico, ctypes.py_object,
                                            ('list', ctypes.c_int, 1),
                                            ('zEnemies', ctypes.c_int, 1))
-        self.performAction          = cfunc('performAction', libamico, None, ('list', ListPOINTER(ctypes.c_int), 1))
-        self.getObservationDetails  = cfunc('getObservationDetails', libamico, ctypes.py_object)
-        self.getVisualRGB           = cfunc('getVisualRGB', libamico, ctypes.py_object)
-        self.getIntermediateReward  = cfunc('getIntermediateReward', libamico, ctypes.c_int)
+        self.performAction          = cfunc('performAction', self.libamico, None, ('list', ListPOINTER(ctypes.c_int), 1))
+        self.getObservationDetails  = cfunc('getObservationDetails', self.libamico, ctypes.py_object)
+        self.getVisualRGB           = cfunc('getVisualRGB', self.libamico, ctypes.py_object)
+        self.getIntermediateReward  = cfunc('getIntermediateReward', self.libamico, ctypes.c_int)
         
         self.last_reward            = self.getIntermediateReward()
     
@@ -149,7 +152,7 @@ class EnvMarioRGB(environment.Environment):
         self.ndim = self.current_state.shape[0]
         print self.current_state.shape
         
-        libamico.tick()
+        self.libamico.tick()
             
         return
 
@@ -164,49 +167,30 @@ class EnvMarioRGB(environment.Environment):
         self.action:    list - translated action
         """
         
-        # self.action: list of boolean values
-        # self.action[0]: no movement if 0, move left if 1
-        # self.action[1]: no movement if 0, move right if 1
-        # self.action[2]: no movement if 0, duck if 1
-        # self.action[3]: no movement if 0, jump if 1
-        # self.action[4]: no movement if 0, run/shoot if 1
-        # self.action[5]: no movement if 0, stand up if 1
+        if action == 0: #'LEFT':
+            return [1, 0, 0, 0, 0, 0] 
+        elif action == 1: #'RIGHT':
+            return [0, 1, 0, 0, 0, 0] 
+        elif action == 2: #'JUMP':
+            return [0, 0, 0, 1, 0, 0] 
+        elif action == 3: #'STAND':
+            return [0, 0, 0, 0, 0, 1] 
+        elif action == 4: #'DUCK':
+            return [0, 0, 1, 0, 0, 0] 
+        elif action == 5: #'RUN_LEFT':
+            return [1, 0, 0, 0, 1, 0] 
+        elif action == 6: #'RUN_RIGHT':
+            return [0, 1, 0, 0, 1, 0] 
+        elif action == 7: #'JUMP_LEFT':
+            return [1, 0, 0, 1, 0, 0] 
+        elif action == 8: #'JUMP_RIGHT':
+            return [0, 1, 0, 1, 0, 0] 
+        elif action == 9: #'RUN/SHOOT':
+            return [0, 0, 0, 0, 1, 0] 
+        elif action == 10: #'JUMP/RUN':
+            return [0, 0, 0, 1, 1, 0] 
         
-        if action == 'RIGHT':
-            #move right
-            self.action = [0, 1, 0, 0, 0, 0] 
-        elif action == 'LEFT':
-            #move left
-            self.action = [1, 0, 0, 0, 0, 0] 
-        elif action == 'JUMP':
-            #jump
-            self.action = [0, 0, 0, 1, 0, 0] 
-        elif action == 'STAND':
-            #stand up
-            self.action = [0, 0, 0, 0, 0, 1] 
-        elif action == 'DUCK':
-            #duck
-            self.action = [0, 0, 1, 0, 0, 0] 
-        elif action == 'RUN_RIGHT':
-            #run right
-            self.action = [0, 1, 0, 0, 1, 0] 
-        elif action == 'RUN_LEFT':
-            #run left
-            self.action = [1, 0, 0, 0, 1, 0] 
-        elif action == 'JUMP_RIGHT':
-            #jump right
-            self.action = [0, 1, 0, 1, 0, 0] 
-        elif action == 'JUMP_LEFT':
-            #jump left
-            self.action = [1, 0, 0, 1, 0, 0] 
-        elif action == 'RUN/SHOOT':
-            #run/shoot
-            self.action = [0, 0, 0, 0, 1, 0] 
-        elif action == 'JUMP/RUN':
-            #jump/run
-            self.action = [0, 0, 0, 1, 1, 0] 
-        
-        return self.action
+        assert False
     
     
     def _calculateReward(self):
@@ -216,6 +200,7 @@ class EnvMarioRGB(environment.Environment):
         self.last_reward:    int
         """
         
+        return self.getIntermediateReward()
         self.current_reward     = self.getIntermediateReward()
         self.last_reward        = self.current_reward - self.previous_reward
         self.previous_reward    = self.current_reward
@@ -223,7 +208,7 @@ class EnvMarioRGB(environment.Environment):
         return self.last_reward
             
     
-    def _do_action(self, action=None):
+    def _do_action(self, action):
         """Perform the given action and return it as well as the resulting state of the
         environment. If no action is given, a random action is performed.
         --------------------------------------
@@ -258,10 +243,8 @@ class EnvMarioRGB(environment.Environment):
         # self._integrateObservation also stores the data of the observation in self.current_state
         #self._integrateObservation(obs[0], obs[1], obs[2], obs[3], obs[4])
         self.current_state = self._transformImageToRGB()
-        
-        self.last_reward = self._calculateReward()
-        
-        return (self.current_state, self.last_reward)
+        reward = self.getIntermediateReward()
+        return (self.current_state, reward)
     
     
     def _transformImageToRGB(self):
