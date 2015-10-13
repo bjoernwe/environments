@@ -8,6 +8,7 @@ import environment
 import ctypes
 
 import matplotlib.pyplot as plt
+from matplotlib import animation
 
 
 
@@ -213,11 +214,22 @@ def cfunc(name, dll, result, * args):
 
 
 if __name__ == '__main__':
+
+    nx = 240
+    ny = 320
     env = EnvMarioRGB(background=True, grayscale=True)
-    result = env.generate_training_data(num_steps=100, whitening=False)
-    print result
-    img = result[0][0][-1].reshape((240, 320))
-    #img = env.current_state.reshape((240, 320))
-    plt.imshow(img, cmap=plt.cm.get_cmap('gray'))
-    plt.show()
+
+    fig = plt.figure()
+    data = np.reshape(env.current_state, (nx, ny))
+    im = plt.imshow(data, cmap='gist_gray', vmin=0, vmax=255)
+
+    def init():
+        im.set_data(np.zeros((nx, ny)))
     
+    def animate(i):
+        data = np.reshape(env.do_action()[0], (nx, ny))
+        im.set_data(data)
+        return im
+    
+    _ = animation.FuncAnimation(fig, animate, init_func=init, frames=nx * ny, interval=25)
+    plt.show()
