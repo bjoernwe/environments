@@ -10,7 +10,7 @@ import itertools
 import ctypes
 
 
-class EnvMario(environment.Environment):
+class EnvMarioRGB(environment.Environment):
     """An environment realizing an interface to the Mario AI Challenge.
     
     http://www.marioai.org
@@ -27,42 +27,62 @@ class EnvMario(environment.Environment):
     """
     path_to_mario = '../../../MarioAI Java'
     
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, randomize_seed=True, background=True, greyscale=False):
         """Initialize the environment.
         --------------------------------------
         Parameters:
         seed:         int
+        greyscale:    boolean - indicates if image data is converted to RGB or greyscale values
         """
         
         if seed == None:
             seed = random.randint(0,999999)
+            
+        if background is False:
+            self.path_to_mario = '../../Mario AI Java'
+            
+            
         random.seed(seed)
-
-        super(EnvMario, self).__init__(seed=seed)
+        
+        self.greyscale              = greyscale
+        self.randomize_seed         = randomize_seed
+        self.seed                   = seed
+        
+        super(EnvMarioRGB, self).__init__(seed=seed)
         
         # not yet initialized cfuncs
-        self.getObservationDetails = None
-        self.getEntireObservation = None
-        self.performAction = None
+        self.getObservationDetails  = None
+        self.getEntireObservation   = None
+        self.performAction          = None
         
-        self.libamico = None
+        self.libamico               = None
         
         # Status information about the agent
-        self.isEpisodeOver = False
-        self.marioFloats = None 
-        self.enemiesFloats = None
-        self.mayMarioJump = None
-        self.isMarioOnGround = None
-        self.marioState = None
-        self.levelScene = None
+        self.isEpisodeOver          = False
+        self.marioFloats            = None 
+        self.enemiesFloats          = None
+        self.mayMarioJump           = None
+        self.isMarioOnGround        = None
+        self.marioState             = None
+        self.levelScene             = None
+        self.enemiesScene           = None
         
-        self.receptiveFieldHeight = 19
-        self.receptiveFieldWidth = 19
-        self.action = [0, 0, 0, 0, 0, 0]
-        self.actions = ['RIGHT', 'LEFT', 'JUMP', 'STAND', 'DUCK', 'RUN_RIGHT', 
-                        'RUN_LEFT', 'JUMP_RIGHT', 'JUMP_LEFT', 'RUN/SHOOT', 'JUMP/RUN']
-
-        self.current_state = []
+        self.receptiveFieldHeight   = 19
+        self.receptiveFieldWidth    = 19
+        self.action                 = [0, 0, 0, 0, 0, 0]
+        self.current_reward         = 0
+        self.previous_reward        = 0
+        self.last_reward            = 0
+        
+        #self.actions               = ['RIGHT', 'LEFT', 'RUN_RIGHT', 'RUN_LEFT', 'JUMP', 'STAND', 'DUCK', 'JUMP_LEFT' 
+        #                              'JUMP_RIGHT', 'RUN/SHOOT', 'JUMP/RUN']
+        self.actions                = ['RIGHT', 'JUMP', 'STAND', 'DUCK', 'RUN_RIGHT', 'JUMP_RIGHT', 'RUN/SHOOT', 'JUMP/RUN']
+        
+        
+        self.current_state          = []
+        self.mario_labels           = []
+        self.levelScene_labels      = []
+        self.enemies_labels         = []
         
         # Initialization of the AmiCo Simulation is adopted from the MarioAI benchmark
         print "Py: AmiCo Simulation Started:"
@@ -92,19 +112,18 @@ class EnvMario(environment.Environment):
         libamico.createMarioEnvironment(javaClass)
     
         # specify necessary cfuncs
-        reset = cfunc('reset', libamico, None, ('list', ListPOINTER(ctypes.c_int), 1))
-        getEntireObservation = cfunc('getEntireObservation', libamico, ctypes.py_object,
-                                     ('list', ctypes.c_int, 1),
-                                     ('zEnemies', ctypes.c_int, 1))
-        self.getEntireObservation = getEntireObservation
-        performAction = cfunc('performAction', libamico, None, ('list', ListPOINTER(ctypes.c_int), 1))
-        self.performAction = performAction
+        self.reset                  = cfunc('reset', libamico, None, ('list', ListPOINTER(ctypes.c_int), 1))
+        self.isLevelFinished        = cfunc('isLevelFinished', libamico, ctypes.c_bool)
+        self.getMarioStatus         = cfunc('getMarioStatus', libamico, ctypes.c_int)
+        self.getEntireObservation   = cfunc('getEntireObservation', libamico, ctypes.py_object,
+                                           ('list', ctypes.c_int, 1),
+                                           ('zEnemies', ctypes.c_int, 1))
+        self.performAction          = cfunc('performAction', libamico, None, ('list', ListPOINTER(ctypes.c_int), 1))
+        self.getObservationDetails  = cfunc('getObservationDetails', libamico, ctypes.py_object)
+        self.getVisualRGB           = cfunc('getVisualRGB', libamico, ctypes.py_object)
+        self.getIntermediateReward  = cfunc('getIntermediateReward', libamico, ctypes.c_int)
         
-        getObservationDetails = cfunc('getObservationDetails', libamico, ctypes.py_object)
-        self.getObservationDetails = getObservationDetails
-
-        getVisualRGB = cfunc('getVisualRGB', libamico, ctypes.py_object)
-        self.getVisualRGB = getVisualRGB
+        self.last_reward            = self.getIntermediateReward()
     
         options = ""
         if len(sys.argv) > 1:
@@ -113,10 +132,10 @@ class EnvMario(environment.Environment):
         if options.startswith('"') and options.endswith('"'):
             options = options[1:-1]
             
-        options1 = options + " -ls " + str(seed)
+        self.options1               = options + " -ls "
+        options1                    = self.options1 + str(self.seed)
 
-        reset(options1)
-        
+        self.reset(options1)
         # make first step to complete initialization
         obsDetails = self.getObservationDetails()
         self._setObservationDetails(obsDetails[0], obsDetails[1], obsDetails[2], obsDetails[3])
@@ -127,7 +146,7 @@ class EnvMario(environment.Environment):
         libamico.tick()
             
         return
-    
+
     
     def _translate(self, action):
         """Translate a given action into a list representation
@@ -180,10 +199,22 @@ class EnvMario(environment.Environment):
         elif action == 'JUMP/RUN':
             #jump/run
             self.action = [0, 0, 0, 1, 1, 0] 
-        elif action == 'END_ACTION':
-            self.action = [1, 1, 1, 1, 1, 1]
         
         return self.action
+    
+    
+    def _calculateReward(self):
+        """Return difference between current and previous reward
+        --------------------------------------
+        Return:
+        self.last_reward:    int
+        """
+        
+        self.current_reward     = self.getIntermediateReward()
+        self.last_reward        = self.current_reward - self.previous_reward
+        self.previous_reward    = self.current_reward
+        
+        return self.last_reward
             
     
     def _do_action(self, action=None):
@@ -194,15 +225,21 @@ class EnvMario(environment.Environment):
         action:        str - action to be performed
         --------------------------------------
         Return:
-        self.current_state:    np.ndarray - the agent's current position in the world, 
-                                            information about the current incarnation of the agent
-                                            and a representation of the agent's current perception
-        action:                str - performed action
+        self.current_state:    np.ndarray - stores the RGB values of the current snapshot
+        self.last_reward:      int - difference between current and previous reward
         """
 
-        if (self.isEpisodeOver):
-            action = 'END_ACTION'
+        # reset Mario to start position if level is finished or Mario is dead
+        if (self.isLevelFinished() == True or self.getMarioStatus() == 0):
             
+            if self.randomize_seed is True:
+                seed = random.randint(0,999999)
+            else:
+                seed = self.seed
+                
+            options1 = self.options1 + str(seed)
+            self.reset(options1)
+
         if action == None:
             choice = random.randint(0,len(self.actions)-1)
             action = self.actions[choice]
@@ -211,23 +248,52 @@ class EnvMario(environment.Environment):
         # perform the translated action and advance the environment by 1 tick
         translatedAction = self._translate(action)
         self.performAction(translatedAction)
+        
         self.libamico.tick()
-
         obsDetails = self.getObservationDetails()
         self._setObservationDetails(obsDetails[0], obsDetails[1], obsDetails[2], obsDetails[3])
         obs = self.getEntireObservation(1, 0)
         
         # self._integrateObservation also stores the data of the observation in self.current_state
         self._integrateObservation(obs[0], obs[1], obs[2], obs[3], obs[4])
-        print translatedAction, '\t', action
         
-        #TODO: return reward value
-        return (self.current_state, 0.0)
+        self.last_reward = self._calculateReward()
+        
+        return (self.current_state, self.last_reward)
+    
+    
+    def _transformImageToRGB(self, greyscale=False):
+        """Return numpy array with RGB or greyscale values of current screen
+        --------------------------------------
+        Return:
+        self.current_state:    np.ndarray - stores the RGB values of the current snapshot
+        """
+        RGB = self.getVisualRGB()
+        N = len(RGB)
+        
+        if greyscale == True:
+            self.current_state = np.zeros(N)
+            for i in range(N):
+                self.current_state[i] = (int(0.21 * ((RGB[i] >> 16) & 0xFF)
+                                           + 0.71 * ((RGB[i] >>  8) & 0xFF)
+                                           + 0.07 * ((RGB[i] >>  0) & 0xFF)))
+   
+        else:
+            self.current_state = np.zeros(3*N)
+            for i in range(N):
+                j = 3*i
+                self.current_state[j+0] = ((RGB[i] >> 16) & 0xFF)
+                self.current_state[j+1] = ((RGB[i] >>  8) & 0xFF)
+                self.current_state[j+2] = ((RGB[i] <<  0) & 0xFF)
+            
+        return self.current_state
+    
 
     # MarioAI function
     def _reset(self):
         self.action = [0, 0, 0, 0, 0, 0]
         self.isEpisodeOver = False
+        
         
     # MarioAI function; adapted to suit the needs of the project
     def _integrateObservation(self, squashedObservation, squashedEnemies, marioPos, enemiesPos, marioState):
@@ -244,54 +310,37 @@ class EnvMario(environment.Environment):
         row = self.receptiveFieldHeight
         col = self.receptiveFieldWidth
         
-        levelScene=[]
+        levelScene     = []
+        enemiesScene   = []
         
         for i in range(row):
             levelScene.append(squashedObservation[i*col:i*col+col])
-
-        #print squashedObservation
-        #print squashedEnemies
-        #print marioPos
-        #print enemiesPos
-        print marioState        
-        self.marioFloats = marioPos
-        self.enemiesFloats = enemiesPos
-        self.mayMarioJump = marioState[3]
-        self.isMarioOnGround = marioState[2]
-        self.marioState = marioState[1]
-        self.levelScene = levelScene
-        self.levelScene = list(itertools.chain(*self.levelScene))
+            enemiesScene.append(squashedEnemies[i*col:i*col+col])
+                   
+        self.marioFloats        = marioPos
+        self.enemiesFloats      = enemiesPos
+        self.mayMarioJump       = marioState[3]
+        self.isMarioOnGround    = marioState[2]
+        self.marioState         = marioState[1]
+        self.levelScene         = levelScene
+        self.levelScene         = list(itertools.chain(*self.levelScene))
+        self.enemiesScene       = enemiesScene
+        self.enemiesScene       = list(itertools.chain(*self.enemiesScene))
         
-        # combine all meaningful data in one vector, composed of the agent's current position in the world,
-        # information about the current incarnation of the agent and a representation of the agent's
-        # current perception
-
-        self.current_state = []
-        self.current_state.append(self.marioFloats)
+        if self.ndim is not None:
+            self.mario_labels.append(self.marioFloats)
+            self.levelScene_labels.append(self.levelScene)
+            self.enemies_labels.append(self.enemiesScene)
         
-        # marioState[1]:
-        # marioState[2]: boolean; 1 if agent is on ground, 0 otherwise
-        # marioState[3]: boolean; 1 if agent may jump, 0 otherwise
-        # marioState[4]: boolean; 1 if agent may shoot/jump, 0 otherwise
-        # marioState[5]: boolean; 1 if agent is carrying a shell, 0 otherwise
-        # marioState[6]: int, total kills
-        # marioState[7]: int, kills by fire
-        # marioState[8]: int, kills by stomping
-        # marioState[9]: int, kills by shell
-        # marioState[10]: integer; representing the remaining time
+        self.current_state = self._transformImageToRGB(self.greyscale)
 
-        self.current_state.append(marioState)
-        self.current_state.append(self.levelScene)
-        self.current_state = list(itertools.chain(*self.current_state))
-        self.current_state = np.array(self.current_state)
-        
 
     # MarioAI function 
     def _setObservationDetails(self, rfWidth, rfHeight, egoRow, egoCol):
-        self.receptiveFieldWidth = rfWidth
-        self.receptiveFieldHeight = rfHeight
-        self.marioEgoRow = egoRow
-        self.marioEgoCol = egoCol
+        self.receptiveFieldWidth    = rfWidth
+        self.receptiveFieldHeight   = rfHeight
+        self.marioEgoRow            = egoRow
+        self.marioEgoCol            = egoCol
         
 # MarioAI class        
 class ListPOINTER(object):
@@ -303,6 +352,7 @@ class ListPOINTER(object):
     def from_param(self, param):
         if isinstance(param, (list, tuple)):
             return (self.etype * len(param))(*param)
+        
         else:
             return param
 
@@ -315,14 +365,18 @@ class ListByRef(object):
         self.etype_p = ctypes.POINTER(etype)
 
     def from_param(self, param):
+        
         if isinstance(param, (list, tuple)):
             val = (self.etype_p * len(param))()
+            
             for i, v in enumerate(param):
                 if isinstance(v, self.etype):
                     val[i] = self.etype_p(v)
                 else:
                     val[i] = v
+                    
             return val
+        
         else:
             return param
 
@@ -351,25 +405,27 @@ class EvaluationInfo(Inspectable):
         print "timeSpent = ", evInfo[12]
         print "hiddenBlocksFound = ", evInfo[13]
 
-        self.widthCells = evInfo[0]
-        self.widthPhys = evInfo[1]
-        self.flowersDevoured = evInfo[2]
-        self.killsByFire = evInfo[3]
-        self.killsByShell = evInfo[4]
-        self.killsByStomp = evInfo[5]
-        self.killsTotal = evInfo[6]
-        self.marioMode = evInfo[7]
-        self.marioStatus = evInfo[8]
-        self.mushroomsDevoured = evInfo[9]
-        self.marioCoinsGained = evInfo[10]
-        self.timeLeft = evInfo[11]
-        self.timeSpent = evInfo[12]
-        self.hiddenBlocksFound = evInfo[13]
+        self.widthCells         = evInfo[0]
+        self.widthPhys          = evInfo[1]
+        self.flowersDevoured    = evInfo[2]
+        self.killsByFire        = evInfo[3]
+        self.killsByShell       = evInfo[4]
+        self.killsByStomp       = evInfo[5]
+        self.killsTotal         = evInfo[6]
+        self.marioMode          = evInfo[7]
+        self.marioStatus        = evInfo[8]
+        self.mushroomsDevoured  = evInfo[9]
+        self.marioCoinsGained   = evInfo[10]
+        self.timeLeft           = evInfo[11]
+        self.timeSpent          = evInfo[12]
+        self.hiddenBlocksFound  = evInfo[13]
 
 # MarioAI function
 def from_param(self, param):
+    
     if isinstance(param, (list, tuple)):
         return (self.etype * len(param))(*param)
+    
     else:
         return param
 
@@ -378,11 +434,13 @@ def cfunc(name, dll, result, * args):
     '''build and apply a ctypes prototype complete with parameter flags'''
     atypes = []
     aflags = []
+    
     for arg in args:
         atypes.append(arg[1])
         aflags.append((arg[2], arg[0]) + arg[3:])
+        
     return ctypes.CFUNCTYPE(result, * atypes)((name, dll), tuple(aflags))
 
 
 if __name__ == '__main__':
-    env_mario = EnvMario()
+    env_mario_rgb = EnvMarioRGB()
