@@ -29,7 +29,7 @@ class EnvMarioRGB(environment.Environment):
     """
     path_to_mario = '../../../../MarioAI Java'
     
-    def __init__(self, seed=None, background=True, grayscale=False):
+    def __init__(self, seed=None, grayscale=False):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -220,7 +220,7 @@ if __name__ == '__main__':
 
     nx = 240
     ny = 320
-    env = EnvMarioRGB(background=True, grayscale=False)
+    env = EnvMarioRGB(grayscale=False)
 
     def transform(img):
         result = np.zeros((nx, ny, 3), dtype=float)
@@ -231,15 +231,16 @@ if __name__ == '__main__':
 
     fig = plt.figure()
     data = transform(env.current_state)
-    im = plt.imshow(data)#, cmap='gist_gray')#, vmin=0, vmax=255)
+    im = plt.imshow(data)
+    #im = plt.imshow(data, cmap='gist_gray', vmin=0, vmax=255)
 
     def init():
         im.set_data(np.zeros((nx, ny)))
     
     def animate(i):
-        data = transform(env.do_action()[0])
+        data = transform(env.do_action([6,8,9,10])[0])
         im.set_data(data)
         return im
     
-    _ = animation.FuncAnimation(fig, animate, init_func=init, frames=nx * ny, interval=25)
+    _ = animation.FuncAnimation(fig, animate, init_func=init, frames=nx*ny, interval=25)
     plt.show()
