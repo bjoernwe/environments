@@ -20,6 +20,9 @@ class EnvMarioCanned(environment.Environment):
         """
         self.video = np.load(os.path.dirname(__file__) + '/mario.npy')
         self.n_frames, ndim = self.video.shape
+        self.image_width = 160
+        self.image_height = 120
+        assert ndim == self.image_width * self.image_height
         self.counter = 0
         super(EnvMarioCanned, self).__init__(ndim = ndim,
                                       initial_state = self.video[0],
@@ -51,7 +54,7 @@ class EnvMarioCanned(environment.Environment):
 
 
 def generate_data(N=2000):
-    env = EnvMarioRGB(grayscale=True)
+    env = EnvMarioRGB(grayscale=True, scaling=.5)
     data = env.generate_training_data(actions=[6,8,9,10], num_steps=N, noisy_dims=0, whitening=False, expansion=1, chunks=1)[0][0]
     np.save('mario.npy', data)
 
@@ -59,9 +62,8 @@ def generate_data(N=2000):
     
 def main():
 
-    nx = 240
-    ny = 320
     env = EnvMarioCanned()
+    nx, ny = env.image_height, env.image_width
 
     fig = plt.figure()
     data = np.reshape(env.current_state, (nx, ny))
