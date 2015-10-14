@@ -67,32 +67,53 @@ class Environment(object):
         return self.last_reward
     
         
-    def do_random_steps(self, num_steps=1):
+#     def do_random_steps(self, num_steps=1):
+#         """
+#         Performs random actions and returns three results:
+#         1) a matrix containing the resulting states
+#         2) a vector of actions performed, one shorter than the state vector 
+#            because there is no action for the last state yet
+#         3) a vector containing the rewards received in each step
+#         """
+#         
+#         rewards = np.zeros(num_steps-1)
+#         states = np.zeros((num_steps, self.ndim))
+#         states[0] = self.get_current_state()
+#         
+#         if self.actions_dict is None:
+#             random_actions = None
+#             for i in range(num_steps-1):
+#                 states[i+1], _, rewards[i] = self.do_action(action=None) 
+#         else:
+#             num_actions = self.get_number_of_possible_actions()
+#             random_actions = self.rnd.randint(0, high=num_actions, size=num_steps-1)
+#             for i, action in enumerate(random_actions):
+#                 states[i+1], _, rewards[i] = self.do_action(action=action) 
+#                 
+#         assert len(states) == len(rewards) + 1
+#         assert random_actions is None or len(states) == len(random_actions) + 1
+#         return [states, random_actions, rewards]
+
+    
+    def do_actions(self, actions=None, num_steps=1):
         """
-        Performs random actions and returns a three results:
+        Performs random actions (given as list or one single integer) and 
+        returns three results:
         1) a matrix containing the resulting states
         2) a vector of actions performed, one shorter than the state vector 
            because there is no action for the last state yet
         3) a vector containing the rewards received in each step
         """
         
-        rewards = np.zeros(num_steps-1)
         states = np.zeros((num_steps, self.ndim))
         states[0] = self.get_current_state()
+        performed_actions = np.zeros(num_steps-1)
+        rewards = np.zeros(num_steps-1)
         
-        if self.actions_dict is None:
-            random_actions = None
-            for i in range(num_steps-1):
-                states[i+1], _, rewards[i] = self.do_action(action=None) 
-        else:
-            num_actions = self.get_number_of_possible_actions()
-            random_actions = self.rnd.randint(0, high=num_actions, size=num_steps-1)
-            for i, action in enumerate(random_actions):
-                states[i+1], _, rewards[i] = self.do_action(action=action) 
-                
-        assert len(states) == len(rewards) + 1
-        assert random_actions is None or len(states) == len(random_actions) + 1
-        return [states, random_actions, rewards]
+        for i in range(num_steps-1):
+            states[i+1], performed_actions[i], rewards[i] = self.do_action(action=actions)
+        
+        return (states, performed_actions, rewards)
 
     
     def do_action(self, action=None):
@@ -125,7 +146,7 @@ class Environment(object):
         raise RuntimeError('method not implemented yet')
     
     
-    def generate_training_data(self, num_steps, noisy_dims=0, whitening=True, expansion=1, chunks=1):
+    def generate_training_data(self, num_steps, actions=None, noisy_dims=0, whitening=True, expansion=1, chunks=1):
         """
         Generates a list of data chunks. Each chunks is a 3-tuple of generated
         data, corresponding actions and reward values/labels. The whitening is
@@ -142,7 +163,7 @@ class Environment(object):
                 N = num_steps[c]
 
             # data
-            data, actions, rewards = self.do_random_steps(num_steps=N)
+            data, actions, rewards = self.do_actions(actions=actions, num_steps=N)
             
             # make sure data has two dimensions
             if data.ndim == 1:
