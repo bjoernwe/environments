@@ -1,11 +1,12 @@
 # Classes and Functions marked with "MarioAI class" or "MarioAI function" are adopted from the MarioAI benchmark
 # and are authored by Sergey Karakovskiy - sergey [at] idsia [fullstop] ch
 
-import sys
-import os
-import numpy as np
-import environment
 import ctypes
+import environment
+import numpy as np
+import os
+import scipy.misc
+import sys
 
 import matplotlib.pyplot as plt
 from matplotlib import animation
@@ -29,7 +30,7 @@ class EnvMarioRGB(environment.Environment):
     """
     path_to_mario = '../../../../MarioAI Java'
     
-    def __init__(self, seed=None, grayscale=False):
+    def __init__(self, seed=None, grayscale=False, scaling=1.):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -37,7 +38,10 @@ class EnvMarioRGB(environment.Environment):
         greyscale:    boolean - indicates if image data is converted to RGB or greyscale values
         """
         
-        self.grayscale              = grayscale
+        self.grayscale = grayscale
+        self.scaling = scaling
+        self.image_width = 320  # may be updated when scaling
+        self.image_height = 240 # may be updated when scaling
         
         # Initialization of the AmiCo Simulation is adopted from the MarioAI benchmark
         print "Py: AmiCo Simulation Started:"
@@ -173,17 +177,22 @@ class EnvMarioRGB(environment.Environment):
             current_state = 0.21 * ((RGB >> 16) & 0xFF) \
                                + 0.71 * ((RGB >>  8) & 0xFF) \
                                + 0.08 * ((RGB >>  0) & 0xFF)
+            if self.scaling != 1.:
+                current_state = current_state.reshape((240,320))
+                current_state = scipy.misc.imresize(current_state, size=self.scaling)
+                self.image_height, self.image_width = current_state.shape
+                current_state = current_state.flatten()
         else:
             N = len(RGB)
             current_state = np.zeros(3*N, dtype=int)
             current_state[0::3] = ((RGB >> 16) & 0xFF)
             current_state[1::3] = ((RGB >>  8) & 0xFF)
             current_state[2::3] = ((RGB)       & 0xFF)
-            #for i in range(N):
-            #    j = 3*i
-            #    self.current_state[j+0] = ((RGB[i] >> 16) & 0xFF)
-            #    self.current_state[j+1] = ((RGB[i] >>  8) & 0xFF)
-            #    self.current_state[j+2] = ((RGB[i] <<  0) & 0xFF)
+            if self.scaling != 1.:
+                current_state = current_state.reshape((240,320,3))
+                current_state = scipy.misc.imresize(current_state, size=self.scaling)
+                self.image_height, self.image_width, _ = current_state.shape
+                current_state = current_state.flatten()
             
         return current_state
     
@@ -218,15 +227,17 @@ def cfunc(name, dll, result, * args):
 
 if __name__ == '__main__':
 
-    nx = 240
-    ny = 320
-    env = EnvMarioRGB(grayscale=False)
+    env = EnvMarioRGB(grayscale=False, scaling=.5)
+    nx, ny = env.image_height, env.image_width
 
-    def transform(img):
-        result = np.zeros((nx, ny, 3), dtype=float)
-        result[:,:,0] = img[0::3].reshape((nx, ny)) / 255.
-        result[:,:,1] = img[1::3].reshape((nx, ny)) / 255.
-        result[:,:,2] = img[2::3].reshape((nx, ny)) / 255.
+    def transform(img, grayscale=False):
+        if grayscale: 
+            result = img.reshape((nx, ny))
+        else:
+            result = np.zeros((nx, ny, 3), dtype=float)
+            result[:,:,0] = img[0::3].reshape((nx, ny)) / 255.
+            result[:,:,1] = img[1::3].reshape((nx, ny)) / 255.
+            result[:,:,2] = img[2::3].reshape((nx, ny)) / 255.
         return result
 
     fig = plt.figure()
