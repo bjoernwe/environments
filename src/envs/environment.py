@@ -99,12 +99,15 @@ class Environment(object):
         """
         Performs the given action and returns the resulting state, the action
         and the received reward. If no action is given, a random action is
-        selected.
+        selected. If a list of actions is give, one is randomly selected from
+        the list.
         """
         
         # select random action
         if action is None:
             action = self.rnd.choice(self.actions_dict.keys())
+        elif isinstance(action, collections.Iterable):
+            action = self.rnd.choice(action)
 
         # perform action        
         self.current_state, reward = self._do_action(action=action)
