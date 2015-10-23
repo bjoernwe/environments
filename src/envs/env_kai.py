@@ -46,7 +46,7 @@ if __name__ == '__main__':
     # sample data
     steps = 10
     env = EnvKai()
-    data = env.do_random_steps(num_steps=steps)[0]
+    data = env.do_actions(num_steps=steps)[0]
     
     print 'Possible actions:'
     for action, describtion in env.get_actions_dict().iteritems():
