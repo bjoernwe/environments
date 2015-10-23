@@ -12,20 +12,30 @@ class EnvMarioCanned(environment.Environment):
     """Returns the video of Super Mario (240x320=76800 pixels, 3000 frames).
     """
 
-    def __init__(self, seed=None):
+    def __init__(self, window_only=False, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
         seed:        int - 
         """
         self.video = np.load(os.path.dirname(__file__) + '/mario.npy')
-        self.n_frames, ndim = self.video.shape
-        self.image_width = 160
-        self.image_height = 120
-        assert ndim == self.image_width * self.image_height
+        self.n_frames, _ = self.video.shape
+        self.window_only = window_only
+        if window_only:
+            self.image_height = 20
+            self.image_width  = 20
+            self.window_mask = np.zeros((120, 160), dtype=bool)
+            self.window_mask[50:70,70:90] = True
+            self.window_mask = self.window_mask.flatten()
+            initial_state = self.video[0,self.window_mask]
+            assert len(initial_state) == 20*20
+        else:
+            self.image_height = 120
+            self.image_width  = 160
+            initial_state = self.video[0]
         self.counter = 0
-        super(EnvMarioCanned, self).__init__(ndim = ndim,
-                                      initial_state = self.video[0],
+        super(EnvMarioCanned, self).__init__(ndim = self.image_height * self.image_width,
+                                      initial_state = initial_state,
                                       noisy_dim_dist = environment.Noise.normal,
                                       seed=seed)
         return
@@ -45,7 +55,10 @@ class EnvMarioCanned(environment.Environment):
         
         self.counter += 1
         if self.counter < self.n_frames:
-            self.current_state = self.video[self.counter]
+            if self.window_only:
+                self.current_state = self.video[self.counter, self.window_mask]
+            else:
+                self.current_state = self.video[self.counter]
         else:
             print 'Warning: Not more than %d video frames available (%d)!' % (self.n_frames, self.counter) 
             self.current_state = np.zeros(self.ndim)
@@ -53,7 +66,7 @@ class EnvMarioCanned(environment.Environment):
 
 
 
-def generate_data(N=2000):
+def generate_data(N=3000):
     env = EnvMarioRGB(grayscale=True, scaling=.5)
     data = env.generate_training_data(actions=[6,8,9,10], num_steps=N, noisy_dims=0, whitening=False, expansion=1, chunks=1)[0][0]
     np.save('mario.npy', data)
@@ -62,7 +75,7 @@ def generate_data(N=2000):
     
 def main():
 
-    env = EnvMarioCanned()
+    env = EnvMarioCanned(window_only=True)
     nx, ny = env.image_height, env.image_width
 
     fig = plt.figure()
