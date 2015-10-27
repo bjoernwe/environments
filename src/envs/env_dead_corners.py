@@ -9,7 +9,7 @@ class EnvDeadCorners(environment.Environment):
     puts the 'agent' back to the center of the square.
     """
 
-    def __init__(self, sigma=0.2, corner_size=.2, ndim=2, seed=None):
+    def __init__(self, sigma=0.2, corner_size=.1, ndim=2, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:

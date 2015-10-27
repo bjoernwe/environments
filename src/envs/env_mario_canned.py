@@ -66,7 +66,7 @@ class EnvMarioCanned(environment.Environment):
 
 
 
-def generate_data(N=4000):
+def generate_data(N=5000):
     env = EnvMarioRGB(grayscale=True, scaling=.5)
     data = env.generate_training_data(actions=[6,8,9,10], num_steps=N, noisy_dims=0, whitening=False, expansion=1, chunks=1)[0][0]
     np.save('mario.npy', data)
