@@ -3,10 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import environment
+from PFANodeMDP import PFANode
 
 
 class EnvEEG(environment.Environment):
-    """Returns a video from ratlab (320x40=12800 pixels, 5000 frames).
+    """Returns EEG data from the from a Kaggle competition:
+    https://www.kaggle.com/c/grasp-and-lift-eeg-detection
     """
 
     def __init__(self, seed=None):
@@ -71,4 +73,4 @@ def main():
 if __name__ == '__main__':
     #convert_csv()
     main()
-    
+
