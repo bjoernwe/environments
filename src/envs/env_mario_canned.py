@@ -12,7 +12,7 @@ class EnvMarioCanned(environment.Environment):
     """Returns the video of Super Mario (240x320=76800 pixels, 3000 frames).
     """
 
-    def __init__(self, window_only=False, seed=None):
+    def __init__(self, window_only=True, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -25,11 +25,15 @@ class EnvMarioCanned(environment.Environment):
             self.image_height = 20
             self.image_width  = 20
             self.window_mask = np.zeros((120, 160), dtype=bool)
-            self.window_mask[50:70,70:90] = True
+            self.window_mask[70:90,70:90] = True
             self.window_mask = self.window_mask.flatten()
             initial_state = self.video[0,self.window_mask]
             assert len(initial_state) == 20*20
         else:
+            self.window_mask = np.zeros((120, 160), dtype=bool)
+            self.window_mask[70:90,70:90] = True
+            self.window_mask = self.window_mask.flatten()
+            
             self.image_height = 120
             self.image_width  = 160
             initial_state = self.video[0]
@@ -59,6 +63,7 @@ class EnvMarioCanned(environment.Environment):
                 self.current_state = self.video[self.counter, self.window_mask]
             else:
                 self.current_state = self.video[self.counter]
+                self.current_state[-self.window_mask] *= .75
         else:
             print 'Warning: Not more than %d video frames available (%d)!' % (self.n_frames, self.counter) 
             self.current_state = np.zeros(self.ndim)
@@ -75,7 +80,7 @@ def generate_data(N=5000):
     
 def main():
 
-    env = EnvMarioCanned(window_only=True)
+    env = EnvMarioCanned(window_only=False)
     nx, ny = env.image_height, env.image_width
 
     fig = plt.figure()
@@ -88,6 +93,8 @@ def main():
     def animate(i):
         data = np.reshape(env.do_action()[0], (nx, ny))
         im.set_data(data)
+        if not i % 25:
+            plt.savefig('mario_%03d.eps' % i)
         return im
     
     _ = animation.FuncAnimation(fig, animate, init_func=init, frames=nx*ny, interval=25)
