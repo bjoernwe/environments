@@ -38,15 +38,15 @@ class EnvDeadCorners(environment.Environment):
         reward = 0
         """
         
-        # perform step
-        for d in range(self.ndim):
-            self.current_state[d] += self.sigma * self.rnd.normal()
-        self.current_state = np.clip(self.current_state, -1, 1)
         # 
         dists_to_corners = 1 - np.abs(self.current_state)
         if np.all(dists_to_corners < self.corner_size):
             self.current_state = np.zeros(self.ndim)
-            #print 'reset'
+        else:
+			# perform random step
+			for d in range(self.ndim):
+				self.current_state[d] += self.sigma * self.rnd.normal()
+			self.current_state = np.clip(self.current_state, -1, 1)
         return self.current_state, 0
 
 

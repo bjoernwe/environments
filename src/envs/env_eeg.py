@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import environment
-from PFANodeMDP import PFANode
+
 
 
 class EnvEEG(environment.Environment):
@@ -62,7 +62,8 @@ def convert_csv():
 
 def main():
     env = EnvEEG()
-    data = env.do_actions(num_steps=2000)[0]
+    print env.n_frames, env.ndim
+    data = env.do_actions(num_steps=25000)[0]
     plt.plot(data[:,0])
     plt.plot(data[:,1])
     plt.plot(data[:,2])
