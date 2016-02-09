@@ -10,9 +10,11 @@ import environment
 
 class EnvData2D(environment.Environment):
     """
+    An environment that serves as a unified interface to different static 2D
+    data sets.
     """
 
-    Datasets = Enum('Datasets', 'face mario ratlab tumor')
+    Datasets = Enum('Datasets', 'Face Mario RatLab Tumor')
     
 
     def __init__(self, dataset, window=None, scaling=1.):
@@ -21,16 +23,16 @@ class EnvData2D(environment.Environment):
         Parameters:
         """
         
-        if dataset == self.Datasets.face:
+        if dataset == self.Datasets.Face:
             self.data_raw = np.load(os.path.dirname(__file__) + '/faces.npy')
             self.image_shape_raw = (28, 20)
-        elif dataset == self.Datasets.mario:
+        elif dataset == self.Datasets.Mario:
             self.data_raw = np.load(os.path.dirname(__file__) + '/mario.npy')
             self.image_shape_raw = (120, 160)
-        elif dataset == self.Datasets.ratlab:
+        elif dataset == self.Datasets.RatLab:
             self.data_raw = np.load(os.path.dirname(__file__) + '/ratlab.npy')
             self.image_shape_raw = (40, 320)
-        elif dataset == self.Datasets.tumor:
+        elif dataset == self.Datasets.Tumor:
             self.data_raw = np.load(os.path.dirname(__file__) + '/tumor.npy')
             self.image_shape_raw = (300, 250)
         else:

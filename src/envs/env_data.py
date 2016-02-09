@@ -14,7 +14,7 @@ class EnvData(environment.Environment):
     data sets.
     """
 
-    Datasets = Enum('Datasets', 'eeg meg')
+    Datasets = Enum('Datasets', 'EEG MEG')
     
 
     def __init__(self, dataset):
