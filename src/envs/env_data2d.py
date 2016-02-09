@@ -15,7 +15,7 @@ class EnvData2D(environment.Environment):
     Datasets = Enum('Datasets', 'face mario ratlab tumor')
     
 
-    def __init__(self, dataset, scaling=1.):
+    def __init__(self, dataset, window=None, scaling=1.):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -39,14 +39,20 @@ class EnvData2D(environment.Environment):
         assert self.image_shape_raw[0] * self.image_shape_raw[1] == self.data_raw.shape[1]
         
         # scale image
+        self.window = window
         self.scaling = scaling
-        if scaling != 1.:
-            scaled_rows = []
+        if window is not None or scaling != 1.:
+            new_rows = []
             for row in self.data_raw:
-                scaled_image = scipy.misc.imresize(row.reshape(self.image_shape_raw), size=scaling)
-                scaled_rows.append(scaled_image.flatten())
-                self.image_shape = scaled_image.shape
-            self.data = np.array(scaled_rows)
+                image = row.reshape(self.image_shape_raw)
+                if window is not None:
+                    ((x1,y1),(x2,y2)) = window  
+                    image = image[x1:x2,y1:y2]
+                if scaling != 1.:
+                    image = scipy.misc.imresize(image, size=scaling)
+                new_rows.append(image.flatten())
+                self.image_shape = image.shape
+            self.data = np.array(new_rows)
         else:
             self.data = self.data_raw
             self.image_shape = self.image_shape_raw
@@ -117,8 +123,7 @@ def main():
     for dat in EnvData2D.Datasets:
         env = EnvData2D(dataset=dat)
         print "%s: %d frames with %d x %d = %d dimensions" % (dat, env.data.shape[0], env.image_shape[0], env.image_shape[1], env.data.shape[1])
-    
-    env = EnvData2D(dataset=EnvData2D.Datasets.mario, scaling=.5)
+    env = EnvData2D(dataset=EnvData2D.Datasets.mario, window=((70,70),(90,90)), scaling=1.)
     env.show_animation()
 
 
