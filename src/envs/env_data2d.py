@@ -11,7 +11,7 @@ class EnvData2D(environment.Environment):
     """
     """
 
-    Datasets = Enum('Datasets', 'face mario ratlab')
+    Datasets = Enum('Datasets', 'face mario ratlab tumor')
     
 
     def __init__(self, dataset):
@@ -29,6 +29,9 @@ class EnvData2D(environment.Environment):
         elif dataset == self.Datasets.ratlab:
             self.data = np.load(os.path.dirname(__file__) + '/ratlab.npy')
             self.image_shape = (40, 320)
+        elif dataset == self.Datasets.tumor:
+            self.data = np.load(os.path.dirname(__file__) + '/tumor.npy')
+            self.image_shape = (300, 250)
         else:
             assert False
 
@@ -94,7 +97,7 @@ class EnvData2D(environment.Environment):
 
 
 def main():
-    env = EnvData2D(dataset=EnvData2D.Datasets.mario)
+    env = EnvData2D(dataset=EnvData2D.Datasets.tumor)
     env.show_animation()
 
 
