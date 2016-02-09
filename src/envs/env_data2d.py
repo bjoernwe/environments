@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import scipy
 
 from enum import Enum
 from matplotlib import animation
@@ -14,28 +15,44 @@ class EnvData2D(environment.Environment):
     Datasets = Enum('Datasets', 'face mario ratlab tumor')
     
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, scaling=1.):
         """Initialize the environment.
         --------------------------------------
         Parameters:
         """
         
         if dataset == self.Datasets.face:
-            self.data = np.load(os.path.dirname(__file__) + '/faces.npy')
-            self.image_shape = (28, 20)
+            self.data_raw = np.load(os.path.dirname(__file__) + '/faces.npy')
+            self.image_shape_raw = (28, 20)
         elif dataset == self.Datasets.mario:
-            self.data = np.load(os.path.dirname(__file__) + '/mario.npy')
-            self.image_shape = (120, 160)
+            self.data_raw = np.load(os.path.dirname(__file__) + '/mario.npy')
+            self.image_shape_raw = (120, 160)
         elif dataset == self.Datasets.ratlab:
-            self.data = np.load(os.path.dirname(__file__) + '/ratlab.npy')
-            self.image_shape = (40, 320)
+            self.data_raw = np.load(os.path.dirname(__file__) + '/ratlab.npy')
+            self.image_shape_raw = (40, 320)
         elif dataset == self.Datasets.tumor:
-            self.data = np.load(os.path.dirname(__file__) + '/tumor.npy')
-            self.image_shape = (300, 250)
+            self.data_raw = np.load(os.path.dirname(__file__) + '/tumor.npy')
+            self.image_shape_raw = (300, 250)
         else:
             assert False
 
+        assert self.image_shape_raw[0] * self.image_shape_raw[1] == self.data_raw.shape[1]
+        
+        # scale image
+        self.scaling = scaling
+        if scaling != 1.:
+            scaled_rows = []
+            for row in self.data_raw:
+                scaled_image = scipy.misc.imresize(row.reshape(self.image_shape_raw), size=scaling)
+                scaled_rows.append(scaled_image.flatten())
+                self.image_shape = scaled_image.shape
+            self.data = np.array(scaled_rows)
+        else:
+            self.data = self.data_raw
+            self.image_shape = self.image_shape_raw
+        
         assert self.image_shape[0] * self.image_shape[1] == self.data.shape[1]
+        assert self.data.shape[0] == self.data_raw.shape[0]
             
         self.counter = 0
         super(EnvData2D, self).__init__(ndim = self.data.shape[1],
@@ -97,7 +114,11 @@ class EnvData2D(environment.Environment):
 
 
 def main():
-    env = EnvData2D(dataset=EnvData2D.Datasets.tumor)
+    for dat in EnvData2D.Datasets:
+        env = EnvData2D(dataset=dat)
+        print "%s: %d frames with %d x %d = %d dimensions" % (dat, env.data.shape[0], env.image_shape[0], env.image_shape[1], env.data.shape[1])
+    
+    env = EnvData2D(dataset=EnvData2D.Datasets.mario, scaling=.5)
     env.show_animation()
 
 
