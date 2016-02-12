@@ -1,5 +1,6 @@
 import collections
 import enum
+import joblib
 import numpy as np
 
 import mdp
@@ -19,7 +20,7 @@ class Environment(object):
     '''
 
 
-    def __init__(self, ndim, initial_state, actions_dict={0: None}, noisy_dim_dist=Noise.uniform, seed=None):
+    def __init__(self, ndim, initial_state, actions_dict={0: None}, noisy_dim_dist=Noise.uniform, cachedir=None, seed=None):
         """
         Initializes the environment including an initial state.
         """
@@ -30,6 +31,11 @@ class Environment(object):
         self.last_action = None
         self.last_reward = None
         self.rnd = np.random.RandomState(seed)
+        if cachedir is not None:
+            if seed is None:
+                print('Warning: cachedir should be used in combination with a fixed seed!')
+            mem = joblib.Memory(cachedir=cachedir)
+            self.generate_training_data = mem.cache(self.generate_training_data)
             
             
     def get_number_of_possible_actions(self):
@@ -67,34 +73,6 @@ class Environment(object):
         return self.last_reward
     
         
-#     def do_random_steps(self, num_steps=1):
-#         """
-#         Performs random actions and returns three results:
-#         1) a matrix containing the resulting states
-#         2) a vector of actions performed, one shorter than the state vector 
-#            because there is no action for the last state yet
-#         3) a vector containing the rewards received in each step
-#         """
-#         
-#         rewards = np.zeros(num_steps-1)
-#         states = np.zeros((num_steps, self.ndim))
-#         states[0] = self.get_current_state()
-#         
-#         if self.actions_dict is None:
-#             random_actions = None
-#             for i in range(num_steps-1):
-#                 states[i+1], _, rewards[i] = self.do_action(action=None) 
-#         else:
-#             num_actions = self.get_number_of_possible_actions()
-#             random_actions = self.rnd.randint(0, high=num_actions, size=num_steps-1)
-#             for i, action in enumerate(random_actions):
-#                 states[i+1], _, rewards[i] = self.do_action(action=action) 
-#                 
-#         assert len(states) == len(rewards) + 1
-#         assert random_actions is None or len(states) == len(random_actions) + 1
-#         return [states, random_actions, rewards]
-
-    
     def do_actions(self, actions=None, num_steps=1):
         """
         Performs random actions (given as list or one single integer) and 
@@ -146,16 +124,16 @@ class Environment(object):
         raise RuntimeError('method not implemented yet')
     
     
-    def generate_training_data(self, num_steps, actions=None, noisy_dims=0, whitening=True, expansion=1, chunks=1):
+    def generate_training_data(self, num_steps, actions=None, noisy_dims=0, keep_variance=1., expansion=1, whitening=True, n_chunks=1):
         """
         Generates a list of data chunks. Each chunks is a 3-tuple of generated
-        data, corresponding actions and reward values/labels. The whitening is
-        calculated from the first chunk only.
+        data, corresponding actions and reward values/labels. PCA (keep_variance) 
+        and whitening are calculated from the first chunk only.
         """
         
         # for every chunk ...
-        result = []
-        for c in range(chunks):
+        chunks = []
+        for c in range(n_chunks):
             
             # number of steps
             N = num_steps
@@ -182,17 +160,29 @@ class Environment(object):
                     assert False
                 data = np.insert(data, data.shape[1], axis=1, values=noise)
     
-            # expansion
-            expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
-            data = expansion_node.execute(data)
-    
-            # whitening
-            if whitening:
-                if c == 0:
-                    whitening_node = mdp.nodes.WhiteningNode(reduce=True)
-                    whitening_node.train(data)
-                data = whitening_node.execute(data)
-    
-            result.append((data, actions, rewards))
+            chunks.append((data, actions, rewards))
             
-        return result
+        # PCA
+        if keep_variance < 1.:
+            pca = mdp.nodes.PCANode(output_dim=keep_variance, reduce=True)
+            if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
+                pca.train(chunks[0][0])
+                chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+            else:
+                pca.train(chunks[0][0].T)
+                pca.stop_training()
+                U = chunks[0][0].T.dot(pca.v)
+                chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
+            
+        # expansion
+        if expansion > 1:
+            expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
+            chunks = [(expansion_node.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+
+        # whitening
+        if whitening:
+            whitening_node = mdp.nodes.WhiteningNode(reduce=True)
+            whitening_node.train(chunks[0][0])
+            chunks = [(whitening_node.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+    
+        return chunks

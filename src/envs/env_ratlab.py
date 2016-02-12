@@ -11,18 +11,15 @@ class EnvRatlab(environment.Environment):
     """Returns a video from ratlab (320x40=12800 pixels, 5000 frames).
     """
 
-    def __init__(self, seed=None):
+    def __init__(self):
         """Initialize the environment.
         --------------------------------------
-        Parameters:
-        seed:        int - 
         """
         self.video = np.load(os.path.dirname(__file__) + '/ratlab.npy')
         self.n_frames, self.ndim = self.video.shape
         super(EnvRatlab, self).__init__(ndim = self.ndim,
                                         initial_state = self.video[0],
-                                        noisy_dim_dist = environment.Noise.normal,
-                                        seed = seed)
+                                        noisy_dim_dist = environment.Noise.normal)
         self.counter = 0
         return
     

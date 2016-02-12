@@ -17,7 +17,7 @@ class EnvData2D(environment.Environment):
     Datasets = Enum('Datasets', 'Face Mario RatLab Tumor')
     
 
-    def __init__(self, dataset, window=None, scaling=1.):
+    def __init__(self, dataset, window=None, scaling=1., cachedir=None, seed=0):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -65,7 +65,9 @@ class EnvData2D(environment.Environment):
         self.counter = 0
         super(EnvData2D, self).__init__(ndim = self.data.shape[1],
                                         initial_state = self.data[0],
-                                        noisy_dim_dist = environment.Noise.normal)
+                                        noisy_dim_dist = environment.Noise.normal,
+                                        cachedir=cachedir,
+                                        seed=seed)
         return
     
     
@@ -125,7 +127,8 @@ def main():
     for dat in EnvData2D.Datasets:
         env = EnvData2D(dataset=dat)
         print "%s: %d frames with %d x %d = %d dimensions" % (dat, env.data.shape[0], env.image_shape[0], env.image_shape[1], env.data.shape[1])
-    env = EnvData2D(dataset=EnvData2D.Datasets.mario, window=((70,70),(90,90)), scaling=1.)
+    #env = EnvData2D(dataset=EnvData2D.Datasets.mario, window=((70,70),(90,90)), scaling=1.)
+    env = EnvData2D(dataset=EnvData2D.Datasets.Tumor, scaling=.25)
     env.show_animation()
 
 

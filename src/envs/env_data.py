@@ -23,10 +23,10 @@ class EnvData(environment.Environment):
         Parameters:
         """
         
-        if dataset == self.Datasets.eeg:
+        if dataset == self.Datasets.EEG:
             self.data = np.load(os.path.dirname(__file__) + '/eeg.npy')
-        elif dataset == self.Datasets.meg:
-            self.data = np.load(os.path.dirname(__file__) + '/meg.npy')
+        elif dataset == self.Datasets.MEG:
+            self.data = np.load(os.path.dirname(__file__) + '/meg.npy') * 1e10
         else:
             assert False
 
