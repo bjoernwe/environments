@@ -14,7 +14,7 @@ class EnvData2D(environment.Environment):
     data sets.
     """
 
-    Datasets = Enum('Datasets', 'Crowd1 Crowd2 Face Mario RatLab Traffic Tumor')
+    Datasets = Enum('Datasets', 'Crowd1 Crowd2 Face Mario Mouth RatLab Traffic Tumor')
     
 
     def __init__(self, dataset, window=None, scaling=1., cachedir=None, seed=0):
@@ -35,6 +35,9 @@ class EnvData2D(environment.Environment):
         elif dataset == self.Datasets.Mario:
             self.data_raw = np.load(os.path.dirname(__file__) + '/mario.npy')
             self.image_shape_raw = (120, 160)
+        elif dataset == self.Datasets.Mouth:
+            self.data_raw = np.load(os.path.dirname(__file__) + '/mouth.npy')
+            self.image_shape_raw = (35, 60)
         elif dataset == self.Datasets.RatLab:
             self.data_raw = np.load(os.path.dirname(__file__) + '/ratlab.npy')
             self.image_shape_raw = (40, 320)
@@ -137,7 +140,7 @@ def main():
         env = EnvData2D(dataset=dat)
         print "%s: %d frames with %d x %d = %d dimensions" % (dat, env.data.shape[0], env.image_shape[0], env.image_shape[1], env.data.shape[1])
     #env = EnvData2D(dataset=EnvData2D.Datasets.mario, window=((70,70),(90,90)), scaling=1.)
-    env = EnvData2D(dataset=EnvData2D.Datasets.Crowd2, scaling=1.)
+    env = EnvData2D(dataset=EnvData2D.Datasets.Mouth, scaling=1.)
     env.show_animation()
 
 
