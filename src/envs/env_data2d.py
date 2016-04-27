@@ -23,6 +23,7 @@ class EnvData2D(environment.Environment):
         Parameters:
         """
         
+        self.labels = None
         if dataset == self.Datasets.Crowd1:
             self.data_raw = np.load(os.path.dirname(__file__) + '/crowd1.npy')
             self.image_shape_raw = (180, 320)
@@ -41,6 +42,8 @@ class EnvData2D(environment.Environment):
         elif dataset == self.Datasets.Mario:
             self.data_raw = np.load(os.path.dirname(__file__) + '/mario.npy')
             self.image_shape_raw = (120, 160)
+            self.labels = [None] + list(np.load(os.path.dirname(__file__) + '/mario_labels.npy'))
+            assert self.data_raw.shape[0] == len(self.labels)
         elif dataset == self.Datasets.Mouth:
             self.data_raw = np.load(os.path.dirname(__file__) + '/mouth.npy')
             self.image_shape_raw = (35, 60)
@@ -52,7 +55,7 @@ class EnvData2D(environment.Environment):
             self.image_shape_raw = (300, 250)
         elif dataset == self.Datasets.Traffic:
             self.data_raw = np.load(os.path.dirname(__file__) + '/traffic.npy')
-            self.image_shape_raw = (180, 300)
+            self.image_shape_raw = (90, 150)
         else:
             assert False
 
@@ -106,10 +109,15 @@ class EnvData2D(environment.Environment):
         self.counter += 1
         if self.counter < frames:
             self.current_state = self.data[self.counter]
+            if self.labels:
+                self.last_reward = self.labels[self.counter]
+            else:
+                self.last_reward = 0
         else:
             print 'Warning: Not more than %d video frames available (%d)!' % (frames, self.counter) 
             self.current_state = np.zeros(dims)
-        return self.current_state, 0
+            self.last_reward = None
+        return self.current_state, self.last_reward
     
     
     
@@ -148,7 +156,7 @@ def main():
         env = EnvData2D(dataset=dat)
         print "%s: %d frames with %d x %d = %d dimensions" % (dat, env.data.shape[0], env.image_shape[0], env.image_shape[1], env.data.shape[1])
     #env = EnvData2D(dataset=EnvData2D.Datasets.Mario, window=((70,70),(90,90)), scaling=1.)
-    env = EnvData2D(dataset=EnvData2D.Datasets.Dancing, scaling=1)
+    env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((35,65),(55,85)), scaling=1)
     env.show_animation()
 
 

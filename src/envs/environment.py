@@ -90,7 +90,7 @@ class Environment(object):
         
         for i in range(num_steps-1):
             states[i+1], performed_actions[i], rewards[i] = self.do_action(action=actions)
-        
+            
         return (states, performed_actions, rewards)
 
     
@@ -130,6 +130,7 @@ class Environment(object):
         data, corresponding actions and reward values/labels. PCA (keep_variance) 
         and whitening are calculated from the first chunk only.
         """
+        # rev: 4
         
         # for every chunk ...
         chunks = []

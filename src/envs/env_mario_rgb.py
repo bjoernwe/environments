@@ -25,7 +25,7 @@ class EnvMarioRGB(environment.Environment):
     
     You may also need to set the environment variable LD_LIBRARY_PATH to include
     libraries that are not found otherwise. For instance, with our current Linux
-    Mint configuration we have to point to /usr/lib/jvm/default-java/jre/lib/amd64/server
+    Mint configuration we have to point to /usr/lib/jvm/java-7-openjdk-amd64/jre/lib/amd64/server
     to be able to find the libjvm library.
     """
     path_to_mario = '../../../../MarioAI Java'
@@ -161,7 +161,8 @@ class EnvMarioRGB(environment.Environment):
         self.performAction(translatedAction)
         self.libamico.tick()
         current_state = self._transformImageToRGB()
-        reward = self.getIntermediateReward()
+        #reward = self.getIntermediateReward()
+        reward = self.getEntireObservation(1, 0)[2][1] # y-position
         return (current_state, reward)
     
     
@@ -250,8 +251,10 @@ if __name__ == '__main__':
     
     def animate(i):
         data = transform(env.do_action([6,8,9,10])[0])
+        #print env.getEntireObservation(1,0)[2][1] # y-position
+        #print env.getEntireObservation(1,0)[4] # mario status
         im.set_data(data)
         return im
     
-    _ = animation.FuncAnimation(fig, animate, init_func=init, frames=nx*ny, interval=25)
+    _ = animation.FuncAnimation(fig, animate, init_func=init, frames=nx*ny, interval=25*5)
     plt.show()

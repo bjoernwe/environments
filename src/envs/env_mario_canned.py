@@ -9,7 +9,7 @@ from envs.env_mario_rgb import EnvMarioRGB
 
 
 class EnvMarioCanned(environment.Environment):
-    """Returns the video of Super Mario (240x320=76800 pixels, 3000 frames).
+    """Returns the video of Super Mario (120x160=19200 pixels, 5000 frames).
     """
 
     def __init__(self, window_only=True, seed=None):
@@ -18,7 +18,8 @@ class EnvMarioCanned(environment.Environment):
         Parameters:
         seed:        int - 
         """
-        self.video = np.load(os.path.dirname(__file__) + '/mario.npy')
+        self.video = np.load(os.path.dirname(__file__) + '/mario.npy')[1:]
+        self.labels = np.load(os.path.dirname(__file__) + '/mario_labels.npy')
         self.n_frames, _ = self.video.shape
         self.window_only = window_only
         if window_only:
@@ -58,23 +59,25 @@ class EnvMarioCanned(environment.Environment):
         """
         
         self.counter += 1
-        if self.counter < self.n_frames:
-            if self.window_only:
-                self.current_state = self.video[self.counter, self.window_mask]
-            else:
-                self.current_state = self.video[self.counter]
-                self.current_state[-self.window_mask] *= .75
-        else:
+        if self.counter >= self.n_frames:
             print 'Warning: Not more than %d video frames available (%d)!' % (self.n_frames, self.counter) 
-            self.current_state = np.zeros(self.ndim)
-        return self.current_state, 0
+            return np.zeros(self.ndim), None
+            
+        if self.window_only:
+            frame = self.video[self.counter, self.window_mask]
+        else:
+            frame = self.video[self.counter]
+            #frame[-self.window_mask] *= .75
+        label = self.labels[self.counter]
+        return frame, label
 
 
 
-def generate_data(N=5000):
-    env = EnvMarioRGB(grayscale=True, scaling=1.)
-    data = env.generate_training_data(actions=[6,8,9,10], num_steps=N, noisy_dims=0, whitening=False, expansion=1, chunks=1)[0][0]
+def generate_data(N=20001):
+    env = EnvMarioRGB(grayscale=True, scaling=.5)
+    data, _, labels = env.generate_training_data(actions=[6,8,9,10], num_steps=N, noisy_dims=0, whitening=False, expansion=1, n_chunks=1)[0]
     np.save('mario.npy', data)
+    np.save('mario_labels.npy', labels)
 
     
     
@@ -91,8 +94,10 @@ def main():
         im.set_data(np.zeros((nx, ny)))
     
     def animate(i):
-        data = np.reshape(env.do_action()[0], (nx, ny))
+        data, _, label = env.do_action()
+        data = np.reshape(data, (nx, ny))
         im.set_data(data)
+        print label
         if not i % 25:
             plt.savefig('mario_%03d.eps' % i)
         return im
