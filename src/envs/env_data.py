@@ -46,6 +46,7 @@ class EnvData(environment.Environment):
             # https://www.freesound.org/people/inchadney/sounds/66785/
             self.data = np.load(os.path.dirname(__file__) + '/wav4_22k.npy')
         else:
+            print dataset
             assert False
 
         self.counter = 0
@@ -147,8 +148,39 @@ def main():
         env = EnvData(dataset=dat)
         print "%s: %d frames with %d dimensions" % (dat, env.data.shape[0], env.data.shape[1])
         #chunks = env.generate_training_data(num_steps=10, num_steps_test=5, n_chunks=2)
+        
+
+def create_stfts():
+    import scipy.io.wavfile
+    import stft
+    wavs = [('wav_11k.npy', 'Wagon Wheel 11k.wav'),
+            ('wav_22k.npy', 'Wagon Wheel 22k.wav'),
+            ('wav2_22k.npy', '48411_luftrum_forestsurroundings_22k.wav'),
+            ('wav3_22k.npy', '163995_leandros-ntounis_crowd-in-a-bar-lcr.wav'),
+            ('wav4_22k.npy', '66785_inchadney_morning-in-the-forest_22k.wav'),
+            ]
+    for filename_out, filename_in in wavs:
+        wav = scipy.io.wavfile.read('/home/weghebvc/Download/%s' % filename_in)[1]
+        ft = stft.spectrogram(wav, framelength=512).T
+        ft = np.hstack([ft.real, ft[:,1:-1].imag])
+        print filename_out, ft.shape
+        np.save(filename_out, ft)
+        
+        
+def plot_pca(dataset):
+    import matplotlib.pyplot as plt
+    data = EnvData(dataset=dataset).data
+    C = np.cov(data[:50000].T)
+    print C.shape
+    E, _ = np.linalg.eigh(C)
+    plt.plot(E)
+    plt.show()
 
 
 
 if __name__ == '__main__':
     main()
+    #create_stfts()
+    #plot_pca(EnvData.Datasets.WAV_22k)
+    #plot_pca(EnvData.Datasets.WAV3_22k)
+    #plot_pca(EnvData.Datasets.WAV4_22k)
