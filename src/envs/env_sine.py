@@ -44,7 +44,7 @@ if __name__ == '__main__':
     # sample data
     steps = 10
     env = EnvSine()
-    data = env.do_random_steps(num_steps=steps)[0]
+    data = env.generate_training_data(num_steps=steps, whitening=False, n_chunks=1)[0][0]
     
     print 'Possible actions:'
     for action, describtion in env.get_actions_dict().iteritems():
