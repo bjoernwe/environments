@@ -22,14 +22,14 @@ class EnvData(environment.Environment):
         --------------------------------------
         Parameters:
         """
-        
         if dataset == self.Datasets.EEG:
             self.data = np.load(os.path.dirname(__file__) + '/eeg.npy')
         elif dataset == self.Datasets.EEG2:
             # http://bbci.de/competition/iv/
             self.data = np.load(os.path.dirname(__file__) + '/eeg2.npy')
         elif dataset == self.Datasets.EEG2_stft_128:
-            self.data = np.load(os.path.dirname(__file__) + '/eeg2_stft_128.npy')
+            #self.data = np.load(os.path.dirname(__file__) + '/eeg2_stft_128.npy')
+            self.data = np.memmap(filename=os.path.dirname(__file__) + '/eeg2_stft_128.mm', mode='r', dtype=np.float32, shape=(29783, 7611))
         elif dataset == self.Datasets.MEG:
             self.data = np.load(os.path.dirname(__file__) + '/meg.npy') * 1e10
         elif dataset == self.Datasets.WAV_11k:
@@ -117,21 +117,31 @@ class EnvData(environment.Environment):
             chunks.append((data, actions, rewards))
             
         # PCA
-        if keep_variance < 1.:
-            pca = mdp.nodes.PCANode(output_dim=keep_variance, reduce=True)
-            if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
-                pca.train(chunks[0][0])
-                chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
-            else:
-                pca.train(chunks[0][0].T)
-                pca.stop_training()
-                U = chunks[0][0].T.dot(pca.v)
-                chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
+#         if keep_variance < 1.:
+#             pca = mdp.nodes.PCANode(output_dim=keep_variance, reduce=True)
+#             if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
+#                 pca.train(chunks[0][0])
+#                 chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+#             else:
+#                 pca.train(chunks[0][0].T)
+#                 pca.stop_training()
+#                 U = chunks[0][0].T.dot(pca.v)
+#                 chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
             
         # expansion
         if expansion > 1:
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
             chunks = [(expansion_node.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+            if keep_variance < 1.:
+                pca = mdp.nodes.PCANode(output_dim=keep_variance, reduce=True)
+                if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
+                    pca.train(chunks[0][0])
+                    chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+                else:
+                    pca.train(chunks[0][0].T)
+                    pca.stop_training()
+                    U = chunks[0][0].T.dot(pca.v)
+                    chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
 
         # whitening
         if whitening:
@@ -148,6 +158,7 @@ def main():
         env = EnvData(dataset=dat)
         print "%s: %d frames with %d dimensions" % (dat, env.data.shape[0], env.data.shape[1])
         #chunks = env.generate_training_data(num_steps=10, num_steps_test=5, n_chunks=2)
+        
         
 
 def create_stfts():
@@ -167,6 +178,20 @@ def create_stfts():
         np.save(filename_out, ft)
         
         
+        
+def create_eeg1():
+    #import urllib
+    #urllib.urlretrieve("https://www.kaggle.com/c/grasp-and-lift-eeg-detection/download/train.zip", "train.zip")
+    #from subprocess import call
+    #call(["unzip", "train.zip"])
+    import csv
+    with open('subj1_series1_data.csv', 'rb') as csvfile:
+        spamreader = csv.reader(csvfile, delimiter=',')
+        for row in spamreader:
+            print ', '.join(row)
+        
+        
+        
 def plot_pca(dataset):
     import matplotlib.pyplot as plt
     data = EnvData(dataset=dataset).data
@@ -181,6 +206,7 @@ def plot_pca(dataset):
 if __name__ == '__main__':
     main()
     #create_stfts()
+    #create_eeg1()
     #plot_pca(EnvData.Datasets.WAV_22k)
     #plot_pca(EnvData.Datasets.WAV3_22k)
     #plot_pca(EnvData.Datasets.WAV4_22k)
