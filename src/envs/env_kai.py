@@ -20,6 +20,7 @@ class EnvKai(environment.Environment):
                                      initial_state = np.zeros(2),
                                      noisy_dim_dist = environment.Noise.normal,
                                      seed=seed)
+        self.counter = 0
         return
     
     
@@ -34,9 +35,10 @@ class EnvKai(environment.Environment):
         new_state:    np.ndarray - coordinates of the agent after the step
         reward = 0
         """
-        
+        self.counter += 1
+        switch = 1#2 * (self.counter % 2) - 1
         new_state = self.rnd.normal(size=2)
-        new_state[1] = self.current_state[0] + new_state[1] * 1e-4
+        new_state[1] = switch * (self.current_state[0])# + new_state[1] * 1e-6)
         self.current_state = new_state
         return self.current_state, 0
 
