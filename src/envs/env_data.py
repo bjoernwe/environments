@@ -14,7 +14,7 @@ class EnvData(environment.Environment):
     data sets.
     """
 
-    Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 MEG WAV_11k WAV_22k WAV2_22k WAV3_22k WAV4_22k')
+    Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 MEG STFT1 STFT2 STFT3')
     
 
     def __init__(self, dataset, cachedir=None, seed=None):
@@ -28,23 +28,19 @@ class EnvData(environment.Environment):
             # http://bbci.de/competition/iv/
             self.data = np.load(os.path.dirname(__file__) + '/eeg2.npy')
         elif dataset == self.Datasets.EEG2_stft_128:
-            #self.data = np.load(os.path.dirname(__file__) + '/eeg2_stft_128.npy')
-            self.data = np.memmap(filename=os.path.dirname(__file__) + '/eeg2_stft_128.mm', mode='r', dtype=np.float32, shape=(29783, 7611))
+            self.data = np.load(os.path.dirname(__file__) + '/eeg2_stft_128.npy')
+            #self.data = np.memmap(filename=os.path.dirname(__file__) + '/eeg2_stft_128.mm', mode='r', dtype=np.float32, shape=(29783, 7611))
         elif dataset == self.Datasets.MEG:
             self.data = np.load(os.path.dirname(__file__) + '/meg.npy') * 1e10
-        elif dataset == self.Datasets.WAV_11k:
-            self.data = np.load(os.path.dirname(__file__) + '/wav_11k.npy')
-        elif dataset == self.Datasets.WAV_22k:
-            self.data = np.load(os.path.dirname(__file__) + '/wav_22k.npy')
-        elif dataset == self.Datasets.WAV2_22k:
+        elif dataset == self.Datasets.STFT1:
             # https://www.freesound.org/people/Luftrum/sounds/48411/
-            self.data = np.load(os.path.dirname(__file__) + '/wav2_22k.npy')
-        elif dataset == self.Datasets.WAV3_22k:
+            self.data = np.load(os.path.dirname(__file__) + '/stft1.npy')
+        elif dataset == self.Datasets.STFT2:
             # https://www.freesound.org/people/Leandros.Ntounis/sounds/163995/
-            self.data = np.load(os.path.dirname(__file__) + '/wav3_22k.npy')
-        elif dataset == self.Datasets.WAV4_22k:
+            self.data = np.load(os.path.dirname(__file__) + '/stft2.npy')
+        elif dataset == self.Datasets.STFT3:
             # https://www.freesound.org/people/inchadney/sounds/66785/
-            self.data = np.load(os.path.dirname(__file__) + '/wav4_22k.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/stft3.npy')
         else:
             print dataset
             assert False
