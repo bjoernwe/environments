@@ -124,7 +124,7 @@ class Environment(object):
         raise RuntimeError('method not implemented yet')
     
     
-    def generate_training_data(self, num_steps, actions=None, noisy_dims=0, keep_variance=1., expansion=1, whitening=True, n_chunks=1):
+    def generate_training_data(self, num_steps, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True, n_chunks=1):
         """
         Generates a list of data chunks. Each chunks is a 3-tuple of generated
         data, corresponding actions and reward values/labels. PCA (keep_variance) 
@@ -164,23 +164,23 @@ class Environment(object):
             chunks.append((data, actions, rewards))
             
         # PCA
-#         if keep_variance < 1.:
-#             pca = mdp.nodes.PCANode(output_dim=keep_variance, reduce=True)
-#             if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
-#                 pca.train(chunks[0][0])
-#                 chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
-#             else:
-#                 pca.train(chunks[0][0].T)
-#                 pca.stop_training()
-#                 U = chunks[0][0].T.dot(pca.v)
-#                 chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
+        if pca < 1.:
+            pca = mdp.nodes.PCANode(output_dim=pca, reduce=True)
+            if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
+                pca.train(chunks[0][0])
+                chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+            else:
+                pca.train(chunks[0][0].T)
+                pca.stop_training()
+                U = chunks[0][0].T.dot(pca.v)
+                chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
             
         # expansion
         if expansion > 1:
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
             chunks = [(expansion_node.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
-            if keep_variance < 1.:
-                pca = mdp.nodes.PCANode(output_dim=keep_variance, reduce=True)
+            if pca_after_expansion < 1.:
+                pca = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
                 if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
                     pca.train(chunks[0][0])
                     chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
