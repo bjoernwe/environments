@@ -20,14 +20,17 @@ class Environment(object):
     '''
 
 
-    def __init__(self, ndim, initial_state, actions_dict={0: None}, noisy_dim_dist=Noise.uniform, cachedir=None, seed=None):
+    def __init__(self, ndim, initial_state, actions_dict={0: None}, time_embedding=1, noisy_dim_dist=Noise.uniform, cachedir=None, seed=None):
         """
         Initializes the environment including an initial state.
         """
         self.ndim = ndim
+        self.ndim_embedded = ndim * time_embedding
         self.actions_dict = actions_dict
         self.noisy_dim_dist = noisy_dim_dist
-        self.current_state = initial_state
+        #self.current_state = initial_state
+        self.time_embedding = time_embedding
+        self.last_states = [initial_state] * self.time_embedding
         self.last_action = None
         self.last_reward = None
         self.rnd = np.random.RandomState(seed)
@@ -56,7 +59,8 @@ class Environment(object):
         """
         Returns the current state of the environment.
         """
-        return self.current_state
+        #return self.current_state
+        return np.hstack(self.last_states)
     
     
     def get_last_action(self):
@@ -83,7 +87,7 @@ class Environment(object):
         3) a vector containing the rewards received in each step
         """
         
-        states = np.zeros((num_steps, self.ndim))
+        states = np.zeros((num_steps, self.ndim_embedded))
         states[0] = self.get_current_state()
         performed_actions = np.zeros(num_steps-1)
         rewards = np.zeros(num_steps-1)
@@ -109,11 +113,16 @@ class Environment(object):
             action = self.rnd.choice(action)
 
         # perform action        
-        self.current_state, reward = self._do_action(action=action)
+        current_state, reward = self._do_action(action=action)
         self.last_action = action
         self.last_reward = reward
         
-        return self.current_state, self.last_action, self.last_reward
+        # time embedding
+        self.last_states = [current_state] + self.last_states[:-1]
+        assert len(self.last_states) == self.time_embedding
+        current_state_embedded = np.hstack(self.last_states)
+        
+        return current_state_embedded, self.last_action, self.last_reward
         
 
     def _do_action(self, action):
@@ -124,76 +133,81 @@ class Environment(object):
         raise RuntimeError('method not implemented yet')
     
     
-    def generate_training_data(self, num_steps, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True, n_chunks=1):
+    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True, n_chunks=1):
         """
-        Generates a list of data chunks. Each chunks is a 3-tuple of generated
-        data, corresponding actions and reward values/labels. PCA (keep_variance) 
-        and whitening are calculated from the first chunk only.
+        Generates [training, test, validation] data as a 3-tuple each. 
+        Each tuple contains data, corresponding actions and reward 
+        values/labels. PCA and whitening are trained from the first training
+        data only.
         """
-        # rev: 4
         
         # for every chunk ...
         chunks = []
-        for c in range(n_chunks):
-            
-            # number of steps
-            N = num_steps
-            if isinstance(num_steps, collections.Iterable):
-                N = num_steps[c]
+        chunk_sizes = [n_train, n_test] + [n_validation if n_validation else None]
+        for num_steps in chunk_sizes:
 
-            # data
-            data, actions, rewards = self.do_actions(actions=actions, num_steps=N)
-            
-            # make sure data has two dimensions
-            if data.ndim == 1:
-                data = np.array(data, ndmin=2).T 
-    
-            # add noisy dim
-            for _ in range(noisy_dims):
-                if self.noisy_dim_dist == Noise.normal:
-                    noise = self.rnd.randn(N)
-                elif self.noisy_dim_dist == Noise.uniform:
-                    noise = self.rnd.rand(N)
-                elif self.noisy_dim_dist == Noise.binary:
-                    noise = self.rnd.randint(2, size=N)
-                else:
-                    print 'I do not understand noisy_dim_dist ==', self.noisy_dim_dist
-                    assert False
-                data = np.insert(data, data.shape[1], axis=1, values=noise)
-    
-            chunks.append((data, actions, rewards))
+            if num_steps <= 0 or num_steps is None:
+                
+                chunks.append((None, None, None))
+                
+            else:
+
+                # data
+                data, actions, rewards = self.do_actions(actions=actions, num_steps=num_steps)
+                
+                # make sure data has two dimensions
+                if data.ndim == 1:
+                    data = np.array(data, ndmin=2).T 
+        
+                # add noisy dim
+                for _ in range(noisy_dims):
+                    if self.noisy_dim_dist == Noise.normal:
+                        noise = self.rnd.randn(num_steps)
+                    elif self.noisy_dim_dist == Noise.uniform:
+                        noise = self.rnd.rand(num_steps)
+                    elif self.noisy_dim_dist == Noise.binary:
+                        noise = self.rnd.randint(2, size=num_steps)
+                    else:
+                        print 'I do not understand noisy_dim_dist ==', self.noisy_dim_dist
+                        assert False
+                    data = np.insert(data, data.shape[1], axis=1, values=noise)
+        
+                chunks.append((data, actions, rewards))
             
         # PCA
         if pca < 1.:
             pca = mdp.nodes.PCANode(output_dim=pca, reduce=True)
             if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
                 pca.train(chunks[0][0])
-                chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+                chunks = [(pca.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
             else:
                 pca.train(chunks[0][0].T)
                 pca.stop_training()
                 U = chunks[0][0].T.dot(pca.v)
-                chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
+                chunks = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
             
         # expansion
         if expansion > 1:
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
-            chunks = [(expansion_node.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+            chunks = [(expansion_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
             if pca_after_expansion < 1.:
                 pca = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
                 if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
                     pca.train(chunks[0][0])
-                    chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+                    chunks = [(pca.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
                 else:
                     pca.train(chunks[0][0].T)
                     pca.stop_training()
                     U = chunks[0][0].T.dot(pca.v)
-                    chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
+                    chunks = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
 
         # whitening
         if whitening:
             whitening_node = mdp.nodes.WhiteningNode(reduce=True)
             whitening_node.train(chunks[0][0])
-            chunks = [(whitening_node.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+            chunks = [(whitening_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
+            
+        # replace (None, None, None) tuples by single None value
+        chunks = [(data, actions, rewards) if data else None for (data, actions, rewards) in chunks]
     
         return chunks

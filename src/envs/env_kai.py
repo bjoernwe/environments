@@ -10,7 +10,7 @@ class EnvKai(environment.Environment):
     previous time step.
     """
 
-    def __init__(self, seed=None):
+    def __init__(self, time_embedding=1, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -18,6 +18,7 @@ class EnvKai(environment.Environment):
         """
         super(EnvKai, self).__init__(ndim = 2,
                                      initial_state = np.zeros(2),
+                                     time_embedding = time_embedding,
                                      noisy_dim_dist = environment.Noise.normal,
                                      seed=seed)
         self.counter = 0
@@ -38,7 +39,7 @@ class EnvKai(environment.Environment):
         self.counter += 1
         switch = 1#2 * (self.counter % 2) - 1
         new_state = self.rnd.normal(size=2)
-        new_state[1] = switch * (self.current_state[0])# + new_state[1] * 1e-6)
+        new_state[1] = switch * (self.get_current_state()[0])# + new_state[1] * 1e-6)
         self.current_state = new_state
         return self.current_state, 0
 
@@ -47,8 +48,9 @@ if __name__ == '__main__':
     
     # sample data
     steps = 10
-    env = EnvKai()
+    env = EnvKai(time_embedding=2)
     data = env.do_actions(num_steps=steps)[0]
+    print data
     
     print 'Possible actions:'
     for action, describtion in env.get_actions_dict().iteritems():

@@ -17,7 +17,7 @@ class EnvData(environment.Environment):
     Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 MEG WAV_11k WAV_22k WAV2_22k WAV3_22k WAV4_22k')
     
 
-    def __init__(self, dataset, cachedir=None, seed=None):
+    def __init__(self, dataset, time_embedding=1, cachedir=None, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -52,6 +52,7 @@ class EnvData(environment.Environment):
         self.counter = 0
         super(EnvData, self).__init__(ndim = self.data.shape[1],
                                       initial_state = self.data[0],
+                                      time_embedding = time_embedding,
                                       noisy_dim_dist = environment.Noise.normal,
                                       cachedir=cachedir,
                                       seed=seed)
@@ -80,76 +81,83 @@ class EnvData(environment.Environment):
         frames, dims = self.data.shape
         self.counter += 1
         if self.counter < frames:
-            self.current_state = self.data[self.counter]
+            current_state = self.data[self.counter]
         else:
             print 'Warning: Not more than %d video frames available (%d)!' % (frames, self.counter) 
-            self.current_state = np.zeros(dims)
-        return self.current_state, 0
+            current_state = np.zeros(dims)
+        return current_state, 0
 
 
 
-    def generate_training_data(self, num_steps, num_steps_test, actions=None, noisy_dims=0, keep_variance=1., expansion=1, whitening=True, n_chunks=1):
+    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True, n_chunks=1):
         """
-        Generates a list of data chunks. Each chunks is a 3-tuple of generated
-        data, corresponding actions and reward values/labels. PCA (keep_variance) 
-        and whitening are calculated from the first chunk only.
+        Generates [training, test, validation] data as a 3-tuple each. 
+        Each tuple contains data, corresponding actions and reward 
+        values/labels. PCA and whitening are trained from the first training
+        data only.
         """
         
-        assert n_chunks <= 2
-        chunks = []
+        if n_validation:
+            print "Don't have validation sets for data files yet."
+            assert n_validation is None
+            
+        results = [] # [tuple_train, tuple_test, tuple_validation]
         
         # data
-        self.counter = self.rnd.randint(0, self.data.shape[0]-num_steps+1) - 1
-        counter2 = range(-1, self.counter-num_steps_test+1)
-        data, actions, rewards = self.do_actions(actions=actions, num_steps=num_steps)
-        counter2 += range(self.counter, self.data.shape[0]-num_steps_test)
+        self.counter = self.rnd.randint(0, self.data.shape[0]-n_train+1) - 1    # -1 because counter is incremented immediately
+        counter2 = range(-1, self.counter-n_test+1)
+        data, actions, rewards = self.do_actions(actions=actions, num_steps=n_train)
+        counter2 += range(self.counter, self.data.shape[0]-n_test)
         if data.ndim == 1:
-            data = np.array(data, ndmin=2).T 
-        chunks.append((data, actions, rewards))
+            data = np.array(data, ndmin=2, dtype=data.dtype).T 
+        results.append((data, actions, rewards))
 
         # data test        
-        if n_chunks == 2:
-            N = num_steps_test if num_steps_test else num_steps
+        if n_test > 0:
             self.counter = self.rnd.choice(counter2)
-            data, actions, rewards = self.do_actions(actions=actions, num_steps=N)
+            data, actions, rewards = self.do_actions(actions=actions, num_steps=n_test)
             if data.ndim == 1:
                 data = np.array(data, ndmin=2).T 
-            chunks.append((data, actions, rewards))
+            results.append((data, actions, rewards))
+        else:
+            results.append((None, None, None))
             
         # PCA
-#         if keep_variance < 1.:
-#             pca = mdp.nodes.PCANode(output_dim=keep_variance, reduce=True)
-#             if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
-#                 pca.train(chunks[0][0])
-#                 chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
-#             else:
-#                 pca.train(chunks[0][0].T)
-#                 pca.stop_training()
-#                 U = chunks[0][0].T.dot(pca.v)
-#                 chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
+        if pca < 1.:
+            pca_node = mdp.nodes.PCANode(output_dim=pca, reduce=True)
+            if results[0][0].shape[1] <= results[0][0].shape[0]:
+                pca_node.train(results[0][0])
+                results = [(pca_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+            else:
+                pca_node.train(results[0][0].T)
+                pca_node.stop_training()
+                U = results[0][0].T.dot(pca_node.v)
+                results = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
             
         # expansion
         if expansion > 1:
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
-            chunks = [(expansion_node.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
-            if keep_variance < 1.:
-                pca = mdp.nodes.PCANode(output_dim=keep_variance, reduce=True)
-                if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
-                    pca.train(chunks[0][0])
-                    chunks = [(pca.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
+            results = [(expansion_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+            if pca_after_expansion < 1.:
+                pca_node = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
+                if results[0][0].shape[1] <= results[0][0].shape[0]:
+                    pca_node.train(results[0][0])
+                    results = [(pca_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
                 else:
-                    pca.train(chunks[0][0].T)
-                    pca.stop_training()
-                    U = chunks[0][0].T.dot(pca.v)
-                    chunks = [(data.dot(U), actions, rewards) for (data, actions, rewards) in chunks]
+                    pca_node.train(results[0][0].T)
+                    pca_node.stop_training()
+                    U = results[0][0].T.dot(pca_node.v)
+                    results = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
 
         # whitening
         if whitening:
             whitening_node = mdp.nodes.WhiteningNode(reduce=True)
-            whitening_node.train(chunks[0][0])
-            chunks = [(whitening_node.execute(data), actions, rewards) for (data, actions, rewards) in chunks]
-    
-        return chunks
+            whitening_node.train(results[0][0])
+            results = [(whitening_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+
+        # replace (None, None, None) tuples by single None value
+        results = [(data, actions, rewards) if data else None for (data, actions, rewards) in results]
+        return results
     
 
 
