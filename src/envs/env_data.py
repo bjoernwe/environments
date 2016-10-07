@@ -8,43 +8,39 @@ from enum import Enum
 import environment
 
 
+Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 MEG STFT1 STFT2 STFT3')
+
+
 class EnvData(environment.Environment):
     """
     An environment that serves as a unified interface to different static
     data sets.
     """
 
-    Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 MEG WAV_11k WAV_22k WAV2_22k WAV3_22k WAV4_22k')
-    
-
     def __init__(self, dataset, time_embedding=1, cachedir=None, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
         """
-        if dataset == self.Datasets.EEG:
+        if dataset == Datasets.EEG:
             self.data = np.load(os.path.dirname(__file__) + '/eeg.npy')
-        elif dataset == self.Datasets.EEG2:
+        elif dataset == Datasets.EEG2:
             # http://bbci.de/competition/iv/
             self.data = np.load(os.path.dirname(__file__) + '/eeg2.npy')
-        elif dataset == self.Datasets.EEG2_stft_128:
+        elif dataset == Datasets.EEG2_stft_128:
             #self.data = np.load(os.path.dirname(__file__) + '/eeg2_stft_128.npy')
             self.data = np.memmap(filename=os.path.dirname(__file__) + '/eeg2_stft_128.mm', mode='r', dtype=np.float32, shape=(29783, 7611))
-        elif dataset == self.Datasets.MEG:
+        elif dataset == Datasets.MEG:
             self.data = np.load(os.path.dirname(__file__) + '/meg.npy') * 1e10
-        elif dataset == self.Datasets.WAV_11k:
-            self.data = np.load(os.path.dirname(__file__) + '/wav_11k.npy')
-        elif dataset == self.Datasets.WAV_22k:
-            self.data = np.load(os.path.dirname(__file__) + '/wav_22k.npy')
-        elif dataset == self.Datasets.WAV2_22k:
+        elif dataset == Datasets.STFT1:
             # https://www.freesound.org/people/Luftrum/sounds/48411/
-            self.data = np.load(os.path.dirname(__file__) + '/wav2_22k.npy')
-        elif dataset == self.Datasets.WAV3_22k:
+            self.data = np.load(os.path.dirname(__file__) + '/data_stft1.npy')
+        elif dataset == Datasets.STFT2:
             # https://www.freesound.org/people/Leandros.Ntounis/sounds/163995/
-            self.data = np.load(os.path.dirname(__file__) + '/wav3_22k.npy')
-        elif dataset == self.Datasets.WAV4_22k:
+            self.data = np.load(os.path.dirname(__file__) + '/data_stft2.npy')
+        elif dataset == Datasets.STFT3:
             # https://www.freesound.org/people/inchadney/sounds/66785/
-            self.data = np.load(os.path.dirname(__file__) + '/wav4_22k.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/data_stft3.npy')
         else:
             print dataset
             assert False
@@ -89,10 +85,10 @@ class EnvData(environment.Environment):
 
 
 
-    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True, n_chunks=1):
+    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True):
         """
-        Generates [training, test, validation] data as a 3-tuple each. 
-        Each tuple contains data, corresponding actions and reward 
+        Generates [training, test] or [training, test, validation] data as a 
+        3-tuple each. Each tuple contains data, corresponding actions and reward 
         values/labels. PCA and whitening are trained from the first training
         data only.
         """
@@ -127,36 +123,38 @@ class EnvData(environment.Environment):
             pca_node = mdp.nodes.PCANode(output_dim=pca, reduce=True)
             if results[0][0].shape[1] <= results[0][0].shape[0]:
                 pca_node.train(results[0][0])
-                results = [(pca_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+                results = [(pca_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
             else:
                 pca_node.train(results[0][0].T)
                 pca_node.stop_training()
                 U = results[0][0].T.dot(pca_node.v)
-                results = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+                results = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
             
         # expansion
         if expansion > 1:
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
-            results = [(expansion_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+            results = [(expansion_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
             if pca_after_expansion < 1.:
                 pca_node = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
                 if results[0][0].shape[1] <= results[0][0].shape[0]:
                     pca_node.train(results[0][0])
-                    results = [(pca_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+                    results = [(pca_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
                 else:
                     pca_node.train(results[0][0].T)
                     pca_node.stop_training()
                     U = results[0][0].T.dot(pca_node.v)
-                    results = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+                    results = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
 
         # whitening
         if whitening:
             whitening_node = mdp.nodes.WhiteningNode(reduce=True)
             whitening_node.train(results[0][0])
-            results = [(whitening_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+            results = [(whitening_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
 
         # replace (None, None, None) tuples by single None value
-        results = [(data, actions, rewards) if data else None for (data, actions, rewards) in results]
+        results = [(data, actions, rewards) if data is not None else None for (data, actions, rewards) in results]
+        results.append((None)) # validation set
+        assert len(results) == 3
         return results
     
 
@@ -172,11 +170,9 @@ def main():
 def create_stfts():
     import scipy.io.wavfile
     import stft
-    wavs = [('wav_11k.npy', 'Wagon Wheel 11k.wav'),
-            ('wav_22k.npy', 'Wagon Wheel 22k.wav'),
-            ('wav2_22k.npy', '48411_luftrum_forestsurroundings_22k.wav'),
-            ('wav3_22k.npy', '163995_leandros-ntounis_crowd-in-a-bar-lcr.wav'),
-            ('wav4_22k.npy', '66785_inchadney_morning-in-the-forest_22k.wav'),
+    wavs = [('data_stft1.npy', 'Wagon Wheel 22k.wav'),
+            ('data_stft2.npy', '163995_leandros-ntounis_crowd-in-a-bar-lcr.wav'),
+            ('data_stft3.npy', '66785_inchadney_morning-in-the-forest_22k.wav'),
             ]
     for filename_out, filename_in in wavs:
         wav = scipy.io.wavfile.read('/home/weghebvc/Download/%s' % filename_in)[1]

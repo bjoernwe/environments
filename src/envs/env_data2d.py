@@ -10,13 +10,14 @@ from matplotlib import animation
 import environment
 
 
+Datasets = Enum('Datasets', 'Crowd1 Crowd2 Crowd3 Dancing Face Mario Mouth RatLab SpaceInvaders Traffic Tumor')
+
+
 class EnvData2D(environment.Environment):
     """
     An environment that serves as a unified interface to different static 2D
     data sets.
     """
-
-    Datasets = Enum('Datasets', 'Crowd1 Crowd2 Crowd3 Dancing Face Mario Mouth RatLab SpaceInvaders Traffic Tumor')
     
 
     def __init__(self, dataset, window=None, scaling=1., time_embedding=1, additive_noise=0.0, cachedir=None, seed=0):
@@ -26,41 +27,41 @@ class EnvData2D(environment.Environment):
         """
         
         self.labels = None
-        if dataset == self.Datasets.Crowd1:
+        if dataset == Datasets.Crowd1:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_crowd1.npy')
             self.image_shape_raw = (180, 320)
-        elif dataset == self.Datasets.Crowd2:
+        elif dataset == Datasets.Crowd2:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_crowd2.npy')
             self.image_shape_raw = (180, 320)
-        elif dataset == self.Datasets.Crowd3:
+        elif dataset == Datasets.Crowd3:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_crowd3.npy')
             self.image_shape_raw = (180, 320)
-        elif dataset == self.Datasets.Dancing:
+        elif dataset == Datasets.Dancing:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_dancing.npy')
             self.image_shape_raw = (180, 320)
-        elif dataset == self.Datasets.Face:
+        elif dataset == Datasets.Face:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_faces.npy')
             self.image_shape_raw = (28, 20)
-        elif dataset == self.Datasets.Mario:
+        elif dataset == Datasets.Mario:
             #self.data_raw = np.load(os.path.dirname(__file__) + '/data_mario.npy')
             self.data_raw = np.memmap(filename=os.path.dirname(__file__) + '/data_mario.mm', dtype=np.uint8, mode='r', shape=(20001, 19200))
             self.image_shape_raw = (120, 160)
             self.labels = [None] + list(np.load(os.path.dirname(__file__) + '/data_mario_labels.npy'))
             assert self.data_raw.shape[0] == len(self.labels)
-        elif dataset == self.Datasets.Mouth:
+        elif dataset == Datasets.Mouth:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_mouth.npy')
             self.image_shape_raw = (35, 60)
-        elif dataset == self.Datasets.RatLab:
+        elif dataset == Datasets.RatLab:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_ratlab.npy')
             self.image_shape_raw = (40, 320)
-        elif dataset == self.Datasets.SpaceInvaders:
+        elif dataset == Datasets.SpaceInvaders:
             #self.data_raw = np.load(os.path.dirname(__file__) + '/data_space_invaders.npy')
             self.data_raw = np.memmap(filename=os.path.dirname(__file__) + '/data_space_invaders.mm', mode='r', shape=(19098, 4160))
             self.image_shape_raw = (52, 80)
-        elif dataset == self.Datasets.Tumor:
+        elif dataset == Datasets.Tumor:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_tumor.npy')
             self.image_shape_raw = (300, 250)
-        elif dataset == self.Datasets.Traffic:
+        elif dataset == Datasets.Traffic:
             self.data_raw = np.load(os.path.dirname(__file__) + '/data_traffic.npy')
             #self.data_raw = np.memmap(filename=os.path.dirname(__file__) + '/data_traffic.mm', mode='r', shape=(23435, 13500))
             self.image_shape_raw = (90, 150)
@@ -141,10 +142,10 @@ class EnvData2D(environment.Environment):
     
     
     
-    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True, n_chunks=1):
+    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True):
         """
-        Generates [training, test, validation] data as a 3-tuple each. 
-        Each tuple contains data, corresponding actions and reward 
+        Generates [training, test] or [training, test, validation] data as a 
+        3-tuple each. Each tuple contains data, corresponding actions and reward 
         values/labels. PCA and whitening are trained from the first training
         data only.
         """
@@ -179,36 +180,38 @@ class EnvData2D(environment.Environment):
             pca_node = mdp.nodes.PCANode(output_dim=pca, reduce=True)
             if results[0][0].shape[1] <= results[0][0].shape[0]:
                 pca_node.train(results[0][0])
-                results = [(pca_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+                results = [(pca_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
             else:
                 pca_node.train(results[0][0].T)
                 pca_node.stop_training()
                 U = results[0][0].T.dot(pca_node.v)
-                results = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+                results = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
             
         # expansion
         if expansion > 1:
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
-            results = [(expansion_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+            results = [(expansion_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
             if pca_after_expansion < 1.:
                 pca_node = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
                 if results[0][0].shape[1] <= results[0][0].shape[0]:
                     pca_node.train(results[0][0])
-                    results = [(pca_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+                    results = [(pca_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
                 else:
                     pca_node.train(results[0][0].T)
                     pca_node.stop_training()
                     U = results[0][0].T.dot(pca_node.v)
-                    results = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+                    results = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
 
         # whitening
         if whitening:
             whitening_node = mdp.nodes.WhiteningNode(reduce=True)
             whitening_node.train(results[0][0])
-            results = [(whitening_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in results]
+            results = [(whitening_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
 
         # replace (None, None, None) tuples by single None value
-        results = [(data, actions, rewards) if data else None for (data, actions, rewards) in results]
+        results = [(data, actions, rewards) if data is not None else None for (data, actions, rewards) in results]
+        results.append((None)) # validation set
+        assert len(results) == 3
         return results
     
 

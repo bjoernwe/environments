@@ -133,10 +133,10 @@ class Environment(object):
         raise RuntimeError('method not implemented yet')
     
     
-    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True, n_chunks=1):
+    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True):
         """
-        Generates [training, test, validation] data as a 3-tuple each. 
-        Each tuple contains data, corresponding actions and reward 
+        Generates [training, test] or [training, test, validation] data as a 
+        3-tuple each. Each tuple contains data, corresponding actions and reward 
         values/labels. PCA and whitening are trained from the first training
         data only.
         """
@@ -179,35 +179,35 @@ class Environment(object):
             pca = mdp.nodes.PCANode(output_dim=pca, reduce=True)
             if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
                 pca.train(chunks[0][0])
-                chunks = [(pca.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
+                chunks = [(pca.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
             else:
                 pca.train(chunks[0][0].T)
                 pca.stop_training()
                 U = chunks[0][0].T.dot(pca.v)
-                chunks = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
+                chunks = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
             
         # expansion
         if expansion > 1:
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
-            chunks = [(expansion_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
+            chunks = [(expansion_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
             if pca_after_expansion < 1.:
                 pca = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
                 if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
                     pca.train(chunks[0][0])
-                    chunks = [(pca.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
+                    chunks = [(pca.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
                 else:
                     pca.train(chunks[0][0].T)
                     pca.stop_training()
                     U = chunks[0][0].T.dot(pca.v)
-                    chunks = [(data.dot(U), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
+                    chunks = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
 
         # whitening
         if whitening:
             whitening_node = mdp.nodes.WhiteningNode(reduce=True)
             whitening_node.train(chunks[0][0])
-            chunks = [(whitening_node.execute(data), actions, rewards) if data else (None, None, None) for (data, actions, rewards) in chunks]
+            chunks = [(whitening_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
             
         # replace (None, None, None) tuples by single None value
-        chunks = [(data, actions, rewards) if data else None for (data, actions, rewards) in chunks]
-    
+        chunks = [(data, actions, rewards) if data is not None else None for (data, actions, rewards) in chunks]
+        assert len(chunks) == 3
         return chunks
