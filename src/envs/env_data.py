@@ -222,7 +222,32 @@ def create_hapt():
     assert data.shape[0] == labels.shape[0]
     np.save('data_hapt.npy', data)
     np.save('data_hapt_labels.npy', labels)
-        
+    
+    
+    
+def create_physionet1():
+    import wfdb
+    dat = np.array(wfdb.rdsamp('~/Downloads/202_38w0d')[0], dtype=np.float16)
+    np.save('202_38w0d.npy', dat)
+    
+    
+    
+def create_physionet2():
+    import csv
+    data = []
+    with open('/home/bjoern/Downloads/n1_data.txt', 'rb') as csvfile:
+        csvreader = csv.reader(csvfile, delimiter=',')
+        csvreader.next()
+        counter = 0
+        for row in csvreader:
+            counter += 1
+            if counter % 1000 == 0:
+                print counter
+            data.append([float(r) if len(r) else np.nan for r in row])
+    data = np.array(data, dtype=np.float16)
+    print data.shape
+    np.save('/home/bjoern/Downloads/n1.npy', data)
+    
         
         
 def plot_pca(dataset):
@@ -237,10 +262,12 @@ def plot_pca(dataset):
 
 
 if __name__ == '__main__':
-    main()
+    #main()
     #create_stfts()
     #create_eeg1()
     #create_hapt()
+    #create_physionet1()
+    create_physionet2()
     #plot_pca(EnvData.Datasets.WAV_22k)
     #plot_pca(EnvData.Datasets.WAV3_22k)
     #plot_pca(EnvData.Datasets.WAV4_22k)
