@@ -8,7 +8,7 @@ from enum import Enum
 import environment
 
 
-Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 MEG STFT1 STFT2 STFT3')
+Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 HAPT MEG STFT1 STFT2 STFT3')
 
 
 class EnvData(environment.Environment):
@@ -23,15 +23,19 @@ class EnvData(environment.Environment):
         Parameters:
         """
         if dataset == Datasets.EEG:
-            self.data = np.load(os.path.dirname(__file__) + '/eeg.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/data_eeg.npy')
         elif dataset == Datasets.EEG2:
             # http://bbci.de/competition/iv/
-            self.data = np.load(os.path.dirname(__file__) + '/eeg2.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/data_eeg2.npy')
         elif dataset == Datasets.EEG2_stft_128:
-            #self.data = np.load(os.path.dirname(__file__) + '/eeg2_stft_128.npy')
-            self.data = np.memmap(filename=os.path.dirname(__file__) + '/eeg2_stft_128.mm', mode='r', dtype=np.float32, shape=(29783, 7611))
+            self.data = np.load(os.path.dirname(__file__) + '/data_eeg2_stft_128.npy')
+            #self.data = np.memmap(filename=os.path.dirname(__file__) + '/data_eeg2_stft_128.mm', mode='r', dtype=np.float32, shape=(29783, 7611))
+        elif dataset == Datasets.HAPT:
+            # http://archive.ics.uci.edu/ml/datasets/Smartphone-Based+Recognition+of+Human+Activities+and+Postural+Transitions
+            self.data   = np.load(os.path.dirname(__file__) + '/data_hapt.npy')
+            self.labels = np.load(os.path.dirname(__file__) + '/data_hapt_labels.npy')
         elif dataset == Datasets.MEG:
-            self.data = np.load(os.path.dirname(__file__) + '/meg.npy') * 1e10
+            self.data = np.load(os.path.dirname(__file__) + '/data_meg.npy') * 1e10
         elif dataset == Datasets.STFT1:
             # https://www.freesound.org/people/Luftrum/sounds/48411/
             self.data = np.load(os.path.dirname(__file__) + '/data_stft1.npy')
@@ -160,7 +164,7 @@ class EnvData(environment.Environment):
 
 
 def main():
-    for dat in EnvData.Datasets:
+    for dat in Datasets:
         env = EnvData(dataset=dat)
         print "%s: %d frames with %d dimensions" % (dat, env.data.shape[0], env.data.shape[1])
         #chunks = env.generate_training_data(num_steps=10, num_steps_test=5, n_chunks=2)
@@ -190,9 +194,34 @@ def create_eeg1():
     #call(["unzip", "train.zip"])
     import csv
     with open('subj1_series1_data.csv', 'rb') as csvfile:
-        spamreader = csv.reader(csvfile, delimiter=',')
-        for row in spamreader:
+        csvreader = csv.reader(csvfile, delimiter=',')
+        for row in csvreader:
             print ', '.join(row)
+            
+            
+            
+def create_hapt():
+    # http://archive.ics.uci.edu/ml/datasets/Smartphone-Based+Recognition+of+Human+Activities+and+Postural+Transitions
+    import csv
+    data = []
+    for csvfilename in ['/home/weghebvc/Download/HAPT Data Set/Train/X_train.txt', '/home/weghebvc/Download/HAPT Data Set/Test/X_test.txt']:
+        with open(csvfilename, 'rb') as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=' ')
+            for row in csvreader:
+                data.append([float(r) for r in row])
+    data = np.array(data, dtype=np.float16)
+    print data.shape
+    labels = []
+    for csvfilename in ['/home/weghebvc/Download/HAPT Data Set/Train/y_train.txt', '/home/weghebvc/Download/HAPT Data Set/Test/y_test.txt']:
+        with open(csvfilename, 'rb') as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=' ')
+            for row in csvreader:
+                labels.append([float(r) for r in row])
+    labels = np.array(labels, dtype=np.int8)[:,0]
+    print labels.shape
+    assert data.shape[0] == labels.shape[0]
+    np.save('data_hapt.npy', data)
+    np.save('data_hapt_labels.npy', labels)
         
         
         
@@ -211,6 +240,7 @@ if __name__ == '__main__':
     main()
     #create_stfts()
     #create_eeg1()
+    #create_hapt()
     #plot_pca(EnvData.Datasets.WAV_22k)
     #plot_pca(EnvData.Datasets.WAV3_22k)
     #plot_pca(EnvData.Datasets.WAV4_22k)
