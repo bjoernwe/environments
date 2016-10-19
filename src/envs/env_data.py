@@ -227,8 +227,13 @@ def create_hapt():
     
 def create_physionet1():
     import wfdb
-    dat = np.array(wfdb.rdsamp('~/Downloads/202_38w0d')[0], dtype=np.float16)
-    np.save('202_38w0d.npy', dat)
+    dbnames = [#'202_38w0d', 
+               #'ucddb002',
+               #'mgh002',
+               'ice001_l_1of1']
+    for db in dbnames:
+        dat = np.array(wfdb.rdsamp('/home/bjoern/Downloads/' + db)[0], dtype=np.float16)
+        np.save('/home/bjoern/Downloads/' + db + '.npy', dat)
     
     
     
@@ -266,8 +271,8 @@ if __name__ == '__main__':
     #create_stfts()
     #create_eeg1()
     #create_hapt()
-    #create_physionet1()
-    create_physionet2()
+    create_physionet1()
+    #create_physionet2()
     #plot_pca(EnvData.Datasets.WAV_22k)
     #plot_pca(EnvData.Datasets.WAV3_22k)
     #plot_pca(EnvData.Datasets.WAV4_22k)
