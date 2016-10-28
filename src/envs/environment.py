@@ -133,7 +133,7 @@ class Environment(object):
         raise RuntimeError('method not implemented yet')
     
     
-    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True):
+    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, additive_noise=0, whitening=True):
         """
         Generates [training, test] or [training, test, validation] data as a 
         3-tuple each. Each tuple contains data, corresponding actions and reward 
@@ -200,6 +200,11 @@ class Environment(object):
                     pca.stop_training()
                     U = chunks[0][0].T.dot(pca.v)
                     chunks = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
+
+        # additive noise
+        if additive_noise:
+            noise_node = mdp.nodes.NoiseNode(noise_args=(0, additive_noise))
+            chunks = [(noise_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
 
         # whitening
         if whitening:

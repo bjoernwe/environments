@@ -20,7 +20,7 @@ class EnvData2D(environment.Environment):
     """
     
 
-    def __init__(self, dataset, window=None, scaling=1., time_embedding=1, additive_noise=0.0, cachedir=None, seed=0):
+    def __init__(self, dataset, window=None, scaling=1., time_embedding=1, limit_data=None, additive_noise=0.0, cachedir=None, seed=0):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -70,6 +70,12 @@ class EnvData2D(environment.Environment):
 
         assert self.image_shape_raw[0] * self.image_shape_raw[1] == self.data_raw.shape[1]
         
+        # limit length
+        if limit_data:
+            self.data_raw = self.data_raw[:limit_data]
+            if self.labels is not None:
+                self.labels = self.labels[:limit_data]
+
         # scale image
         self.window = window
         self.scaling = scaling
@@ -78,7 +84,7 @@ class EnvData2D(environment.Environment):
             for row in self.data_raw:
                 image = row.reshape(self.image_shape_raw)
                 if window is not None:
-                    ((x1,y1),(x2,y2)) = window  
+                    ((x1,y1),(x2,y2)) = window
                     image = image[x1:x2,y1:y2]
                 if scaling != 1.:
                     image = scipy.misc.imresize(image, size=scaling)
@@ -142,7 +148,7 @@ class EnvData2D(environment.Environment):
     
     
     
-    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True):
+    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, additive_noise=0, whitening=True):
         """
         Generates [training, test] or [training, test, validation] data as a 
         3-tuple each. Each tuple contains data, corresponding actions and reward 
@@ -201,6 +207,11 @@ class EnvData2D(environment.Environment):
                     pca_node.stop_training()
                     U = results[0][0].T.dot(pca_node.v)
                     results = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
+
+        # additive noise
+        if additive_noise:
+            noise_node = mdp.nodes.NoiseNode(noise_args=(0, additive_noise))
+            results = [(noise_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
 
         # whitening
         if whitening:
@@ -286,10 +297,10 @@ def create_space_invader_data():
 
 
 def main():
-    for dat in EnvData2D.Datasets:
+    for dat in Datasets:
         env = EnvData2D(dataset=dat)
         print "%s: %d frames with %d x %d = %d dimensions" % (dat, env.data.shape[0], env.image_shape[0], env.image_shape[1], env.data.shape[1])
-    env = EnvData2D(dataset=EnvData2D.Datasets.Mario, scaling=1.)
+    #env = EnvData2D(dataset=EnvData2D.Datasets.Mario, scaling=1.)
     #env = EnvData2D(dataset=EnvData2D.Datasets.Mario, window=((70,70),(90,90)), scaling=1.)
     #env = EnvData2D(dataset=EnvData2D.Datasets.Mario, window=((76,76),(84,84)), scaling=1.)
     #env = EnvData2D(dataset=EnvData2D.Datasets.SpaceInvaders, scaling=1)
@@ -298,7 +309,7 @@ def main():
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, scaling=1)
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((35,65),(55,85)), scaling=1)
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((41,71),(49,79)), scaling=1)
-    env.show_animation()
+    #env.show_animation()
 
 
 

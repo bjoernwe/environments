@@ -1,6 +1,7 @@
 import joblib
 import mdp
 import os
+import matplotlib.pyplot as plt
 import numpy as np
 
 from enum import Enum
@@ -8,7 +9,7 @@ from enum import Enum
 import environment
 
 
-Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 HAPT MEG STFT1 STFT2 STFT3')
+Datasets = Enum('Datasets', 'EEG EEG2 EEG2_stft_128 EIGHT_EMOTION FIN_EQU_FUNDS HAPT MEG PHYSIO_EHG PHYSIO_MGH PHYSIO_MMG PHYSIO_UCD STFT1 STFT2 STFT3')
 
 
 class EnvData(environment.Environment):
@@ -17,11 +18,13 @@ class EnvData(environment.Environment):
     data sets.
     """
 
-    def __init__(self, dataset, time_embedding=1, cachedir=None, seed=None):
+    def __init__(self, dataset, time_embedding=1, limit_data=None, cachedir=None, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
         """
+        self.labels = None
+        
         if dataset == Datasets.EEG:
             self.data = np.load(os.path.dirname(__file__) + '/data_eeg.npy')
         elif dataset == Datasets.EEG2:
@@ -30,12 +33,33 @@ class EnvData(environment.Environment):
         elif dataset == Datasets.EEG2_stft_128:
             self.data = np.load(os.path.dirname(__file__) + '/data_eeg2_stft_128.npy')
             #self.data = np.memmap(filename=os.path.dirname(__file__) + '/data_eeg2_stft_128.mm', mode='r', dtype=np.float32, shape=(29783, 7611))
+        elif dataset == Datasets.EIGHT_EMOTION:
+            # http://affect.media.mit.edu/share-data.php
+            self.data = np.load(os.path.dirname(__file__) + '/data_eight_emotion.npy')
+        elif dataset == Datasets.FIN_EQU_FUNDS:
+            self.data = np.load(os.path.dirname(__file__) + '/data_equity_funds.npy')
         elif dataset == Datasets.HAPT:
             # http://archive.ics.uci.edu/ml/datasets/Smartphone-Based+Recognition+of+Human+Activities+and+Postural+Transitions
             self.data   = np.load(os.path.dirname(__file__) + '/data_hapt.npy')
             self.labels = np.load(os.path.dirname(__file__) + '/data_hapt_labels.npy')
         elif dataset == Datasets.MEG:
             self.data = np.load(os.path.dirname(__file__) + '/data_meg.npy') * 1e10
+        elif dataset == Datasets.PHYSIO_EHG:
+            # https://physionet.org/physiobank/database/ehgdb/
+            # file: ice001_l_1of1
+            self.data = np.load(os.path.dirname(__file__) + '/data_physio_ehg.npy')
+        elif dataset == Datasets.PHYSIO_MGH:
+            # https://physionet.org/physiobank/database/mghdb/
+            # file: mgh002
+            self.data = np.load(os.path.dirname(__file__) + '/data_physio_mgh.npy')
+        elif dataset == Datasets.PHYSIO_MMG:
+            # https://physionet.org/physiobank/database/mmgdb/
+            # file: 202_38w0d
+            self.data = np.load(os.path.dirname(__file__) + '/data_physio_mmg.npy')
+        elif dataset == Datasets.PHYSIO_UCD:
+            # https://physionet.org/physiobank/database/ucddb/
+            # file: ucddb002
+            self.data = np.load(os.path.dirname(__file__) + '/data_physio_ucd.npy')
         elif dataset == Datasets.STFT1:
             # https://www.freesound.org/people/Luftrum/sounds/48411/
             self.data = np.load(os.path.dirname(__file__) + '/data_stft1.npy')
@@ -48,6 +72,12 @@ class EnvData(environment.Environment):
         else:
             print dataset
             assert False
+            
+        # limit length
+        if limit_data:
+            self.data = self.data[:limit_data]
+            if self.labels is not None:
+                self.labels = self.labels[:limit_data]
 
         self.counter = 0
         super(EnvData, self).__init__(ndim = self.data.shape[1],
@@ -89,7 +119,7 @@ class EnvData(environment.Environment):
 
 
 
-    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, whitening=True):
+    def generate_training_data(self, n_train, n_test, n_validation=None, actions=None, noisy_dims=0, pca=1., pca_after_expansion=1., expansion=1, additive_noise=0, whitening=True):
         """
         Generates [training, test] or [training, test, validation] data as a 
         3-tuple each. Each tuple contains data, corresponding actions and reward 
@@ -149,6 +179,11 @@ class EnvData(environment.Environment):
                     U = results[0][0].T.dot(pca_node.v)
                     results = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
 
+        # additive noise
+        if additive_noise:
+            noise_node = mdp.nodes.NoiseNode(noise_args=(0, additive_noise))
+            results = [(noise_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
+
         # whitening
         if whitening:
             whitening_node = mdp.nodes.WhiteningNode(reduce=True)
@@ -162,14 +197,6 @@ class EnvData(environment.Environment):
         return results
     
 
-
-def main():
-    for dat in Datasets:
-        env = EnvData(dataset=dat)
-        print "%s: %d frames with %d dimensions" % (dat, env.data.shape[0], env.data.shape[1])
-        #chunks = env.generate_training_data(num_steps=10, num_steps_test=5, n_chunks=2)
-        
-        
 
 def create_stfts():
     import scipy.io.wavfile
@@ -237,24 +264,24 @@ def create_physionet1():
     
     
     
-def create_physionet2():
-    import csv
-    data = []
-    with open('/home/bjoern/Downloads/n1_data.txt', 'rb') as csvfile:
-        csvreader = csv.reader(csvfile, delimiter=',')
-        csvreader.next()
-        counter = 0
-        for row in csvreader:
-            counter += 1
-            if counter % 1000 == 0:
-                print counter
-            data.append([float(r) if len(r) else np.nan for r in row])
-    data = np.array(data, dtype=np.float16)
+def create_funds():
+    data = np.loadtxt('/home/weghebvc/Download/equityFunds.csv', dtype=np.float16, skiprows=1, usecols=range(1,9), delimiter=';')
+    print data
     print data.shape
-    np.save('/home/bjoern/Downloads/n1.npy', data)
+    np.save('data_equity_funds.npy', data)
     
-        
-        
+    
+    
+def create_emotions():
+    # Eight-Emotion Sentics Data:
+    # http://affect.media.mit.edu/share-data.php
+    import scipy.io
+    data = scipy.io.loadmat('/home/weghebvc/Download/MAS622data/day1.mat')['day1']
+    print data.shape
+    np.save('data_eight_emotion.npy', data)
+    
+    
+            
 def plot_pca(dataset):
     import matplotlib.pyplot as plt
     data = EnvData(dataset=dataset).data
@@ -266,13 +293,25 @@ def plot_pca(dataset):
 
 
 
+def main():
+    for dat in Datasets:
+        env = EnvData(dataset=dat)
+        print "%s: %d frames with %d dimensions" % (dat, env.data.shape[0], env.data.shape[1])
+        #chunks = env.generate_training_data(num_steps=10, num_steps_test=5, n_chunks=2)
+    env = EnvData(dataset=Datasets.STFT3)
+    plt.plot(env.data[:20000])
+    plt.show()
+        
+        
+
 if __name__ == '__main__':
-    #main()
+    main()
     #create_stfts()
     #create_eeg1()
     #create_hapt()
-    create_physionet1()
-    #create_physionet2()
+    #create_physionet1()
+    #create_funds()
+    #create_emotions()
     #plot_pca(EnvData.Datasets.WAV_22k)
     #plot_pca(EnvData.Datasets.WAV3_22k)
     #plot_pca(EnvData.Datasets.WAV4_22k)
