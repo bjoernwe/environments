@@ -163,17 +163,17 @@ class EnvData2D(environment.Environment):
         results = [] # [tuple_train, tuple_test, tuple_validation]
         
         # data
-        self.counter = self.rnd.randint(0, self.data.shape[0]-n_train+1) - 1    # -1 because counter is incremented immediately
-        counter2 = range(-1, self.counter-n_test+1)
+        self.counter = self.rnd.randint(0, self.data.shape[0]-n_train-n_test+1) - 1    # -1 because counter is incremented immediately
+        #counter2 = range(-1, self.counter-n_test+1)
         data, actions, rewards = self.do_actions(actions=actions, num_steps=n_train)
-        counter2 += range(self.counter, self.data.shape[0]-n_test)
+        #counter2 += range(self.counter, self.data.shape[0]-n_test)
         if data.ndim == 1:
             data = np.array(data, ndmin=2, dtype=data.dtype).T 
         results.append((data, actions, rewards))
 
         # data test        
         if n_test > 0:
-            self.counter = self.rnd.choice(counter2)
+            #self.counter = self.rnd.choice(counter2)
             data, actions, rewards = self.do_actions(actions=actions, num_steps=n_test)
             if data.ndim == 1:
                 data = np.array(data, ndmin=2).T 
