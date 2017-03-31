@@ -18,7 +18,7 @@ class EnvData(environment.Environment):
     data sets.
     """
 
-    def __init__(self, dataset, time_embedding=1, limit_data=None, cachedir=None, seed=None):
+    def __init__(self, dataset, time_embedding=1, limit_data=None, sampling_rate=1, cachedir=None, seed=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -72,6 +72,12 @@ class EnvData(environment.Environment):
         else:
             print dataset
             assert False
+            
+        # sampling rate
+        if sampling_rate != 1:
+            self.data = self.data[::sampling_rate]
+            if self.labels is not None:
+                self.labels = self.labels[::sampling_rate]
             
         # limit length
         if limit_data:
@@ -254,10 +260,11 @@ def create_hapt():
     
 def create_physionet1():
     import wfdb
-    dbnames = [#'202_38w0d', 
-               #'ucddb002',
-               #'mgh002',
-               'ice001_l_1of1']
+    dbnames = [#'202_38w0d',   # MMG https://www.physionet.org/pn6/mmgdb/
+               #'ucddb002',    # UCD https://www.physionet.org/pn3/ucddb/
+               #'mgh002',      # MGH https://physionet.org/pn3/mghdb/
+               'ice001_l_1of1' # EHG https://physionet.org/pn6/ehgdb/
+               ]
     for db in dbnames:
         dat = np.array(wfdb.rdsamp('/home/bjoern/Downloads/' + db)[0], dtype=np.float16)
         np.save('/home/bjoern/Downloads/' + db + '.npy', dat)
@@ -298,9 +305,11 @@ def main():
         env = EnvData(dataset=dat)
         print "%s: %d frames with %d dimensions" % (dat, env.data.shape[0], env.data.shape[1])
         #chunks = env.generate_training_data(num_steps=10, num_steps_test=5, n_chunks=2)
-    env = EnvData(dataset=Datasets.PHYSIO_MMG)
-    plt.plot(env.data[:25000])
-    plt.show()
+    #for i, dataset in enumerate([Datasets.STFT1, Datasets.STFT2, Datasets.STFT3]):
+    #    env = EnvData(dataset=dataset)
+    #    plt.subplot(1, 3, i+1)
+    #    plt.plot(env.data[:200,0])
+    #plt.show()
         
         
 
