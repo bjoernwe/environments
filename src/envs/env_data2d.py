@@ -300,16 +300,19 @@ def main():
     for dat in Datasets:
         env = EnvData2D(dataset=dat)
         print "%s: %d frames with %d x %d = %d dimensions" % (dat, env.data.shape[0], env.image_shape[0], env.image_shape[1], env.data.shape[1])
-    #env = EnvData2D(dataset=EnvData2D.Datasets.Mario, scaling=1.)
+    #env = EnvData2D(dataset=Datasets.Mario, scaling=1.)
+    env = EnvData2D(dataset=Datasets.Mario, scaling=(50,50), window=((0,20),(120,140)))
     #env = EnvData2D(dataset=EnvData2D.Datasets.Mario, window=((70,70),(90,90)), scaling=1.)
     #env = EnvData2D(dataset=EnvData2D.Datasets.Mario, window=((76,76),(84,84)), scaling=1.)
-    #env = EnvData2D(dataset=EnvData2D.Datasets.SpaceInvaders, scaling=1)
+    #env = EnvData2D(dataset=Datasets.SpaceInvaders, scaling=1)
+    env = EnvData2D(dataset=Datasets.SpaceInvaders, scaling=(50,50), window=((0,14),(52,66)))
     #env = EnvData2D(dataset=EnvData2D.Datasets.SpaceInvaders, window=((16,30),(36,50)), scaling=1)
     #env = EnvData2D(dataset=EnvData2D.Datasets.SpaceInvaders, window=((22,36),(30,44)), scaling=1)
-    #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, scaling=1)
+    #env = EnvData2D(dataset=Datasets.Traffic, scaling=1)
+    env = EnvData2D(dataset=Datasets.Traffic, scaling=(50,50), window=((0,30),(90,120)))
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((35,65),(55,85)), scaling=1)
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((41,71),(49,79)), scaling=1)
-    #env.show_animation()
+    env.show_animation()
 
 
 

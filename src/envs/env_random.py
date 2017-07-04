@@ -47,8 +47,8 @@ class EnvRandom(environment.Environment):
 if __name__ == '__main__':
 
     steps = 1000
-    env = EnvRandom(ndim=2)
-    data, actions, _ = env.do_random_steps(num_steps=steps)
+    env = EnvRandom(ndim=2, seed=1)
+    data, _, _ = env.generate_training_data(n_train=10, n_test=0)[0]
     
     print 'Possible actions:'
     for action, describtion in env.get_actions_dict().iteritems():
