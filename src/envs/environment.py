@@ -20,7 +20,7 @@ class Environment(object):
     '''
 
 
-    def __init__(self, ndim, initial_state, actions_dict={0: None}, time_embedding=1, noisy_dim_dist=Noise.uniform, cachedir=None, seed=None):
+    def __init__(self, ndim, initial_state, seed, actions_dict={0: None}, time_embedding=1, noisy_dim_dist=Noise.uniform, cachedir=None):
         """
         Initializes the environment including an initial state.
         """

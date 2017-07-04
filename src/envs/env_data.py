@@ -18,7 +18,7 @@ class EnvData(environment.Environment):
     data sets.
     """
 
-    def __init__(self, dataset, time_embedding=1, limit_data=None, sampling_rate=1, cachedir=None, seed=None):
+    def __init__(self, dataset, seed, time_embedding=1, limit_data=None, sampling_rate=1, cachedir=None):
         """Initialize the environment.
         --------------------------------------
         Parameters:
@@ -267,6 +267,8 @@ def create_physionet1():
                ]
     for db in dbnames:
         dat = np.array(wfdb.rdsamp('/home/bjoern/Downloads/' + db)[0], dtype=np.float16)
+        if db == 'ice001_l_1of1':
+            db = db[500:99500]
         np.save('/home/bjoern/Downloads/' + db + '.npy', dat)
     
     
@@ -302,14 +304,15 @@ def plot_pca(dataset):
 
 def main():
     for dat in Datasets:
-        env = EnvData(dataset=dat)
+        env = EnvData(dataset=dat, seed=0)
         print "%s: %d frames with %d dimensions" % (dat, env.data.shape[0], env.data.shape[1])
         #chunks = env.generate_training_data(num_steps=10, num_steps_test=5, n_chunks=2)
-    #for i, dataset in enumerate([Datasets.STFT1, Datasets.STFT2, Datasets.STFT3]):
-    #    env = EnvData(dataset=dataset)
-    #    plt.subplot(1, 3, i+1)
-    #    plt.plot(env.data[:200,0])
-    #plt.show()
+    for i, dataset in enumerate([Datasets.PHYSIO_EHG]):
+        env = EnvData(dataset=dataset, seed=0)
+        #plt.subplot(1, 3, i+1)
+        #plt.plot(env.data)
+        print(env.generate_training_data(n_train=100, n_test=0, whitening=False)[0][0])
+    plt.show()
         
         
 
