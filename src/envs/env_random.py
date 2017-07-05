@@ -15,8 +15,7 @@ class EnvRandom(environment.Environment):
                                         initial_state = 0.0,
                                         noisy_dim_dist = Noise.normal,
                                         seed=seed)
-        self.current_state = self._noise()
-        
+
         
     def _noise(self):
         """
@@ -39,8 +38,7 @@ class EnvRandom(environment.Environment):
         """
         Returns new noise and a return value (zero).
         """
-        self.current_state = self._noise()
-        return self.current_state, 0
+        return self._noise(), 0
 
 
 

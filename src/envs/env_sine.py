@@ -35,8 +35,7 @@ class EnvSine(environment.Environment):
         """
         
         self.counter += 1
-        self.current_state = np.sin(self.counter)
-        return self.current_state, 0
+        return np.sin(self.counter), 0
 
 
 if __name__ == '__main__':

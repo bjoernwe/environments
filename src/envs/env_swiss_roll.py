@@ -50,8 +50,7 @@ class EnvSwissRoll(environment.Environment):
         self.t = np.clip(self.t, 0, self.fourpi)
         
         # result
-        self.current_state = self._f(self.t)
-        return self.current_state, self.t
+        return self._f(self.t), self.t
 
 
 

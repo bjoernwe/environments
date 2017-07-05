@@ -53,15 +53,14 @@ class EnvSwissRoll3D(environment.Environment):
         self.z = np.clip(self.z, 0, 1)
         
         # result
-        self.current_state = np.hstack([self._f(self.phi), self.z])
+        current_state = np.hstack([self._f(self.phi), self.z])
         
         # color label
         a = int(8 * self.phi / self.threepi - 1e-6)
         b = int(2 * self.z - 1e-6)
         color = (a + b) % 2
         
-        #return self.current_state, self.phi
-        return self.current_state, color
+        return current_state, color
 
 
 

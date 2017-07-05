@@ -28,41 +28,41 @@ class EnvData2D(environment.Environment):
         
         self.labels = None
         if dataset == Datasets.Crowd1:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_crowd1.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_crowd1.npy')
             self.image_shape_raw = (180, 320)
         elif dataset == Datasets.Crowd2:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_crowd2.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_crowd2.npy')
             self.image_shape_raw = (180, 320)
         elif dataset == Datasets.Crowd3:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_crowd3.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_crowd3.npy')
             self.image_shape_raw = (180, 320)
         elif dataset == Datasets.Dancing:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_dancing.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_dancing.npy')
             self.image_shape_raw = (180, 320)
         elif dataset == Datasets.Face:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_faces.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_faces.npy')
             self.image_shape_raw = (28, 20)
         elif dataset == Datasets.Mario:
             #self.data_raw = np.load(os.path.dirname(__file__) + '/data_mario.npy')
-            self.data_raw = np.memmap(filename=os.path.dirname(__file__) + '/data_mario.mm', dtype=np.uint8, mode='r', shape=(20001, 19200))
+            self.data_raw = np.memmap(filename=os.path.dirname(__file__) + '/datasets/data_mario.mm', dtype=np.uint8, mode='r', shape=(20001, 19200))
             self.image_shape_raw = (120, 160)
-            self.labels = [None] + list(np.load(os.path.dirname(__file__) + '/data_mario_labels.npy'))
+            self.labels = [None] + list(np.load(os.path.dirname(__file__) + '/datasets/data_mario_labels.npy'))
             assert self.data_raw.shape[0] == len(self.labels)
         elif dataset == Datasets.Mouth:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_mouth.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_mouth.npy')
             self.image_shape_raw = (35, 60)
         elif dataset == Datasets.RatLab:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_ratlab.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_ratlab.npy')
             self.image_shape_raw = (40, 320)
         elif dataset == Datasets.SpaceInvaders:
             #self.data_raw = np.load(os.path.dirname(__file__) + '/data_space_invaders.npy')
-            self.data_raw = np.memmap(filename=os.path.dirname(__file__) + '/data_space_invaders.mm', mode='r', shape=(19098, 4160))
+            self.data_raw = np.memmap(filename=os.path.dirname(__file__) + '/datasets/data_space_invaders.mm', mode='r', shape=(19098, 4160))
             self.image_shape_raw = (52, 80)
         elif dataset == Datasets.Tumor:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_tumor.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_tumor.npy')
             self.image_shape_raw = (300, 250)
         elif dataset == Datasets.Traffic:
-            self.data_raw = np.load(os.path.dirname(__file__) + '/data_traffic.npy')
+            self.data_raw = np.load(os.path.dirname(__file__) + '/datasets/data_traffic.npy')
             #self.data_raw = np.memmap(filename=os.path.dirname(__file__) + '/data_traffic.mm', mode='r', shape=(23435, 13500))
             self.image_shape_raw = (90, 150)
         else:
@@ -235,7 +235,7 @@ class EnvData2D(environment.Environment):
         if invert:
             data = 255 - np.reshape(self.get_current_state(), self.image_shape)
         else:
-            data = np.reshape(self.current_state, self.image_shape)
+            data = np.reshape(self.get_current_state(), self.image_shape)
         im = plt.imshow(data, cmap='gist_gray_r', vmin=0, vmax=255)
 
         def init():
@@ -251,7 +251,7 @@ class EnvData2D(environment.Environment):
                 plt.gca().set_title(i)
             return im
     
-        _ = animation.FuncAnimation(fig, animate, init_func=init, frames=self.data.shape[1], interval=25)
+        _ = animation.FuncAnimation(fig, animate, init_func=init, frames=self.data.shape[0], interval=25)
         plt.show()
 
 
@@ -300,6 +300,7 @@ def main():
     for dat in Datasets:
         env = EnvData2D(dataset=dat)
         print "%s: %d frames with %d x %d = %d dimensions" % (dat, env.data.shape[0], env.image_shape[0], env.image_shape[1], env.data.shape[1])
+        env.show_animation()
     #env = EnvData2D(dataset=Datasets.Mario, scaling=1.)
     env = EnvData2D(dataset=Datasets.Mario, scaling=(50,50), window=((0,20),(120,140)))
     #env = EnvData2D(dataset=EnvData2D.Datasets.Mario, window=((70,70),(90,90)), scaling=1.)
@@ -312,8 +313,7 @@ def main():
     env = EnvData2D(dataset=Datasets.Traffic, scaling=(50,50), window=((0,30),(90,120)))
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((35,65),(55,85)), scaling=1)
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((41,71),(49,79)), scaling=1)
-    env = EnvData2D(dataset=Datasets.Face)
-    env.show_animation()
+    #env.show_animation()
 
 
 

@@ -39,7 +39,11 @@ class Environment(object):
                 print('Warning: cachedir should be used in combination with a fixed seed!')
             mem = joblib.Memory(cachedir=cachedir)
             self.generate_training_data = mem.cache(self.generate_training_data)
-            
+
+    @property
+    def current_state(self):
+        print 'Warning: Environment.current_state is deprecated'
+        return self.get_current_state()
             
     def get_number_of_possible_actions(self):
         """
