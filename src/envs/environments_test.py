@@ -4,12 +4,10 @@ import unittest
 import env_cube
 import env_dead_corners
 import env_disk
-import env_face
 import env_predictable_noise
 import env_ladder
 import env_oscillator
 import env_random
-import env_ratlab
 import env_ribbon
 import env_sine
 import env_swiss_roll
@@ -24,13 +22,11 @@ class EnvironmentTest(unittest.TestCase):
         self.environments.append(env_cube.EnvCube)    
         self.environments.append(env_dead_corners.EnvDeadCorners)    
         self.environments.append(env_disk.EnvDisk)    
-        self.environments.append(env_face.EnvFace)    
         self.environments.append(env_predictable_noise.EnvPredictableNoise)
         self.environments.append(env_ladder.EnvLadder)    
         self.environments.append(env_oscillator.EnvOscillator)    
         self.environments.append(env_random.EnvRandom)    
-        #self.environments.append(env_ratlab.EnvRatlab)    
-        self.environments.append(env_ribbon.EnvRibbon)    
+        self.environments.append(env_ribbon.EnvRibbon)
         self.environments.append(env_sine.EnvSine)    
         self.environments.append(env_swiss_roll.EnvSwissRoll)    
         self.environments.append(env_swiss_roll_3d.EnvSwissRoll3D)    
@@ -47,10 +43,10 @@ class EnvironmentTest(unittest.TestCase):
             #print Env.__name__
             
             env = Env(seed=3)
-            A, actions_1, rewards_1 = env.generate_training_data(num_steps=100, noisy_dims=2)[0]
+            A, actions_1, rewards_1 = env.generate_training_data(n_train=100, n_test=0, noisy_dims=2)[0]
             
             env = Env(seed=3)
-            B, actions_2, rewards_2 = env.generate_training_data(num_steps=100, noisy_dims=2)[0]
+            B, actions_2, rewards_2 = env.generate_training_data(n_train=100, n_test=0, noisy_dims=2)[0]
             
             assert np.array_equal(A, B)
             assert np.array_equal(actions_1, actions_2)
@@ -71,10 +67,10 @@ class EnvironmentTest(unittest.TestCase):
             #print Env.__name__
             
             env = Env()
-            A, actions_1, _ = env.generate_training_data(num_steps=100, noisy_dims=2)[0]
+            A, actions_1, _ = env.generate_training_data(n_train=100, n_test=0, noisy_dims=2)[0]
             
             env = Env()
-            B, actions_2, _ = env.generate_training_data(num_steps=100, noisy_dims=2)[0]
+            B, actions_2, _ = env.generate_training_data(n_train=100, n_test=0, noisy_dims=2)[0]
         
             assert not np.array_equal(A, B)
             if env.get_number_of_possible_actions() >= 2:

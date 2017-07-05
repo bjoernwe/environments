@@ -41,10 +41,11 @@ class EnvCube(environment.Environment):
         """
         
         # perform step
+        current_state = self.get_current_state()
         for d in range(self.ndim):
-            self.current_state[d] += self.sigma * self.rnd.normal()
-        self.current_state = np.clip(self.current_state, 0, 1)
-        return self.current_state, 0
+            current_state[d] += self.sigma * self.rnd.normal()
+        current_state = np.clip(current_state, 0, 1)
+        return current_state, 0
 
 
 if __name__ == '__main__':

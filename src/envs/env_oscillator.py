@@ -38,11 +38,12 @@ class EnvOscillator(environment.Environment):
         
         if self.rnd.rand() < self.transition_prob:
             self.counter += 1
-        
+
+        current_state = self.get_current_state()
         for i in range(self.ndim):
-            self.current_state[i] = (self.counter >> i) % 2
+            current_state[i] = (self.counter >> i) % 2
         
-        return self.current_state, 0
+        return current_state, 0
 
 
 if __name__ == '__main__':
