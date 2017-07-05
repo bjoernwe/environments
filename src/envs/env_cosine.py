@@ -46,8 +46,8 @@ class EnvCosine(environment.Environment):
         """
         
         self.counter += 1
-        self.current_state = self._f(self.counter)
-        return self.current_state, 0
+        current_state = self._f(self.counter)
+        return current_state, 0
 
 
 if __name__ == '__main__':
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # sample data
     steps = 100
     env = EnvCosine(ndim=3, pace=100)
-    data = env.generate_training_data(num_steps=steps, whitening=False, n_chunks=1)[0][0]
+    data = env.generate_training_data(n_train=steps, n_test=0, whitening=False)[0][0]
     
     print 'Possible actions:'
     for action, describtion in env.get_actions_dict().iteritems():

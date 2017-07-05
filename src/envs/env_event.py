@@ -4,8 +4,7 @@ import environment
 
 
 class EnvEvent(environment.Environment):
-    """A simple environment in which an event occurs randomly with a certain
-    probability.
+    """A simple environment in which a binary event occurs randomly with a certain probability.
     """
 
     def __init__(self, prob=.1, seed=None):
@@ -15,11 +14,8 @@ class EnvEvent(environment.Environment):
         prob:        float - probability of event
         seed:        int - 
         """
-        super(EnvEvent, self).__init__(seed=seed)
-        self.ndim = 1
-        self.noisy_dim_dist = 'binary'
+        super(EnvEvent, self).__init__(ndim=1, initial_state=0, seed=seed, noisy_dim_dist=environment.Noise.binary)
         self.prob = prob
-        self.current_state = 0
         return
     
     
@@ -36,12 +32,12 @@ class EnvEvent(environment.Environment):
         """
         
         if self.rnd.rand() < self.prob:
-            self.current_state = 1
+            current_state = 1
         else:
-            self.current_state = 0
-        self.current_state += 1e-10 * self.rnd.randn()
+            current_state = 0
+        current_state += 1e-10 * self.rnd.randn()
             
-        return self.current_state, 0
+        return current_state, 0
 
 
 if __name__ == '__main__':
@@ -49,7 +45,7 @@ if __name__ == '__main__':
     # sample data
     steps = 100
     env = EnvEvent()
-    data = env.do_random_steps(num_steps=steps)[0]
+    data = env.do_actions(num_steps=steps)[0]
     
     print 'Possible actions:'
     for action, describtion in env.get_actions_dict().iteritems():

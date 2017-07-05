@@ -68,10 +68,11 @@ class EnvDisk(environment.Environment):
         self.rad = 0 if self.rad < 0 else self.rad
         self.rad = 1 if self.rad > 1 else self.rad
 
-        self.current_state[0] = self.rad * np.cos(self.phi)
-        self.current_state[1] = self.rad * np.sin(self.phi)
+        current_state = self.get_current_state()
+        current_state[0] = self.rad * np.cos(self.phi)
+        current_state[1] = self.rad * np.sin(self.phi)
         
-        return self.current_state, 0
+        return current_state, 0
 
 
 if __name__ == '__main__':
@@ -79,7 +80,7 @@ if __name__ == '__main__':
     # sample data
     steps = 1000
     circle = EnvDisk()
-    data, actions, _ = circle.do_random_steps(num_steps=steps)
+    data, actions, _ = circle.do_actions(num_steps=steps)
     
     print 'Possible actions:'
     for action, describtion in circle.get_actions_dict().iteritems():

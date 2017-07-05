@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import environment
 
 
-class EnvKai(environment.Environment):
+class EnvPredictableNoise(environment.Environment):
     """A simple two-dimensional environment in which the first component is
     noise and the second component inherits the value of the first from the
     previous time step.
@@ -16,11 +16,11 @@ class EnvKai(environment.Environment):
         Parameters:
         seed:        int - 
         """
-        super(EnvKai, self).__init__(ndim = 2,
-                                     initial_state = np.zeros(2),
-                                     time_embedding = time_embedding,
-                                     noisy_dim_dist = environment.Noise.normal,
-                                     seed=seed)
+        super(EnvPredictableNoise, self).__init__(ndim = 2,
+                                                  initial_state = np.zeros(2),
+                                                  time_embedding = time_embedding,
+                                                  noisy_dim_dist = environment.Noise.normal,
+                                                  seed=seed)
         self.counter = 0
         return
     
@@ -40,15 +40,15 @@ class EnvKai(environment.Environment):
         switch = 1#2 * (self.counter % 2) - 1
         new_state = self.rnd.normal(size=2)
         new_state[1] = switch * (self.get_current_state()[0])# + new_state[1] * 1e-6)
-        self.current_state = new_state
-        return self.current_state, 0
+        #self.current_state = new_state
+        return new_state, 0
 
 
 if __name__ == '__main__':
     
     # sample data
     steps = 10
-    env = EnvKai(time_embedding=2)
+    env = EnvPredictableNoise(time_embedding=1)
     data = env.do_actions(num_steps=steps)[0]
     print data
     
@@ -59,4 +59,3 @@ if __name__ == '__main__':
     # plot data
     plt.plot(data)
     plt.show()
-    

@@ -38,10 +38,11 @@ class EnvLadder(environment.Environment):
         """
         
         shift = 0 if self.allow_stay else 1
-        self.current_state += self.rnd.randint(self.max_steps) + shift
-        self.current_state = self.current_state % self.num_states
+        current_state = self.get_current_state()
+        current_state += self.rnd.randint(self.max_steps) + shift
+        current_state = current_state % self.num_states
         
-        return self.current_state, 0
+        return current_state, 0
 
 
 if __name__ == '__main__':

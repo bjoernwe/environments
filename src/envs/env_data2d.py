@@ -312,6 +312,7 @@ def main():
     env = EnvData2D(dataset=Datasets.Traffic, scaling=(50,50), window=((0,30),(90,120)))
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((35,65),(55,85)), scaling=1)
     #env = EnvData2D(dataset=EnvData2D.Datasets.Traffic, window=((41,71),(49,79)), scaling=1)
+    env = EnvData2D(dataset=Datasets.Face)
     env.show_animation()
 
 
