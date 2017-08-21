@@ -34,6 +34,8 @@ class Environment(object):
         self.last_action = None
         self.last_reward = None
         self.rnd = np.random.RandomState(seed)
+        self.pca1 = None # PCA node before expansion
+        self.pca2 = None # PCA node after expansion
         if cachedir is not None:
             if seed is None:
                 print('Warning: cachedir should be used in combination with a fixed seed!')
@@ -180,14 +182,15 @@ class Environment(object):
             
         # PCA
         if pca < 1.:
-            pca = mdp.nodes.PCANode(output_dim=pca, reduce=True)
+            pca_node = mdp.nodes.PCANode(output_dim=pca, reduce=True)
             if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
-                pca.train(chunks[0][0])
-                chunks = [(pca.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
+                pca_node.train(chunks[0][0])
+                chunks = [(pca_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
+                self.pca1 = pca_node
             else:
-                pca.train(chunks[0][0].T)
-                pca.stop_training()
-                U = chunks[0][0].T.dot(pca.v)
+                pca_node.train(chunks[0][0].T)
+                pca_node.stop_training()
+                U = chunks[0][0].T.dot(pca_node.v)
                 chunks = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
             
         # expansion
@@ -195,14 +198,15 @@ class Environment(object):
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
             chunks = [(expansion_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
             if pca_after_expansion < 1.:
-                pca = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
+                pca_node_2 = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
                 if chunks[0][0].shape[1] <= chunks[0][0].shape[0]:
-                    pca.train(chunks[0][0])
-                    chunks = [(pca.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
+                    pca_node_2.train(chunks[0][0])
+                    chunks = [(pca_node_2.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
+                    self.pca2 = pca_node_2
                 else:
-                    pca.train(chunks[0][0].T)
-                    pca.stop_training()
-                    U = chunks[0][0].T.dot(pca.v)
+                    pca_node_2.train(chunks[0][0].T)
+                    pca_node_2.stop_training()
+                    U = chunks[0][0].T.dot(pca_node_2.v)
                     chunks = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in chunks]
 
         # additive noise

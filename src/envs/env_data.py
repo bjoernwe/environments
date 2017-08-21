@@ -26,49 +26,49 @@ class EnvData(environment.Environment):
         self.labels = None
         
         if dataset == Datasets.EEG:
-            self.data = np.load(os.path.dirname(__file__) + '/data_eeg.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_eeg.npy')
         elif dataset == Datasets.EEG2:
             # http://bbci.de/competition/iv/
-            self.data = np.load(os.path.dirname(__file__) + '/data_eeg2.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_eeg2.npy')
         elif dataset == Datasets.EEG2_stft_128:
-            self.data = np.load(os.path.dirname(__file__) + '/data_eeg2_stft_128.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_eeg2_stft_128.npy')
             #self.data = np.memmap(filename=os.path.dirname(__file__) + '/data_eeg2_stft_128.mm', mode='r', dtype=np.float32, shape=(29783, 7611))
         elif dataset == Datasets.EIGHT_EMOTION:
             # http://affect.media.mit.edu/share-data.php
-            self.data = np.load(os.path.dirname(__file__) + '/data_eight_emotion.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_eight_emotion.npy')
         elif dataset == Datasets.FIN_EQU_FUNDS:
-            self.data = np.load(os.path.dirname(__file__) + '/data_equity_funds.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_equity_funds.npy')
         elif dataset == Datasets.HAPT:
             # http://archive.ics.uci.edu/ml/datasets/Smartphone-Based+Recognition+of+Human+Activities+and+Postural+Transitions
-            self.data   = np.load(os.path.dirname(__file__) + '/data_hapt.npy')
-            self.labels = np.load(os.path.dirname(__file__) + '/data_hapt_labels.npy')
+            self.data   = np.load(os.path.dirname(__file__) + '/../../datasets/data_hapt.npy')
+            self.labels = np.load(os.path.dirname(__file__) + '/../../datasets/data_hapt_labels.npy')
         elif dataset == Datasets.MEG:
-            self.data = np.load(os.path.dirname(__file__) + '/data_meg.npy') * 1e10
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_meg.npy') * 1e10
         elif dataset == Datasets.PHYSIO_EHG:
             # https://physionet.org/physiobank/database/ehgdb/
             # file: ice001_l_1of1
-            self.data = np.load(os.path.dirname(__file__) + '/data_physio_ehg.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_physio_ehg.npy')
         elif dataset == Datasets.PHYSIO_MGH:
             # https://physionet.org/physiobank/database/mghdb/
             # file: mgh002
-            self.data = np.load(os.path.dirname(__file__) + '/data_physio_mgh.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_physio_mgh.npy')
         elif dataset == Datasets.PHYSIO_MMG:
             # https://physionet.org/physiobank/database/mmgdb/
             # file: 202_38w0d
-            self.data = np.load(os.path.dirname(__file__) + '/data_physio_mmg.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_physio_mmg.npy')
         elif dataset == Datasets.PHYSIO_UCD:
             # https://physionet.org/physiobank/database/ucddb/
             # file: ucddb002
-            self.data = np.load(os.path.dirname(__file__) + '/data_physio_ucd.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_physio_ucd.npy')
         elif dataset == Datasets.STFT1:
             # https://www.freesound.org/people/Luftrum/sounds/48411/
-            self.data = np.load(os.path.dirname(__file__) + '/data_stft1.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_stft1.npy')
         elif dataset == Datasets.STFT2:
             # https://www.freesound.org/people/Leandros.Ntounis/sounds/163995/
-            self.data = np.load(os.path.dirname(__file__) + '/data_stft2.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_stft2.npy')
         elif dataset == Datasets.STFT3:
             # https://www.freesound.org/people/inchadney/sounds/66785/
-            self.data = np.load(os.path.dirname(__file__) + '/data_stft3.npy')
+            self.data = np.load(os.path.dirname(__file__) + '/../../datasets/data_stft3.npy')
         else:
             print dataset
             assert False
@@ -159,11 +159,12 @@ class EnvData(environment.Environment):
             results.append((None, None, None))
             
         # PCA
-        if pca < 1.:
+        if pca != 1. or type(pca) != type(1.): # catch integer 1 (one dimension)
             pca_node = mdp.nodes.PCANode(output_dim=pca, reduce=True)
             if results[0][0].shape[1] <= results[0][0].shape[0]:
                 pca_node.train(results[0][0])
                 results = [(pca_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
+                self.pca1 = pca_node
             else:
                 pca_node.train(results[0][0].T)
                 pca_node.stop_training()
@@ -175,14 +176,15 @@ class EnvData(environment.Environment):
             expansion_node = mdp.nodes.PolynomialExpansionNode(degree=expansion)
             results = [(expansion_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
             if pca_after_expansion < 1.:
-                pca_node = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
+                pca_node_2 = mdp.nodes.PCANode(output_dim=pca_after_expansion, reduce=True)
                 if results[0][0].shape[1] <= results[0][0].shape[0]:
-                    pca_node.train(results[0][0])
-                    results = [(pca_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
+                    pca_node_2.train(results[0][0])
+                    results = [(pca_node_2.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
+                    self.pca2 = pca_node_2
                 else:
-                    pca_node.train(results[0][0].T)
-                    pca_node.stop_training()
-                    U = results[0][0].T.dot(pca_node.v)
+                    pca_node_2.train(results[0][0].T)
+                    pca_node_2.stop_training()
+                    U = results[0][0].T.dot(pca_node_2.v)
                     results = [(data.dot(U), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
 
         # additive noise
@@ -195,6 +197,7 @@ class EnvData(environment.Environment):
             whitening_node = mdp.nodes.WhiteningNode(reduce=True)
             whitening_node.train(results[0][0])
             results = [(whitening_node.execute(data), actions, rewards) if data is not None else (None, None, None) for (data, actions, rewards) in results]
+            self.whitening_node = whitening_node
 
         # replace (None, None, None) tuples by single None value
         results = [(data, actions, rewards) if data is not None else None for (data, actions, rewards) in results]
@@ -307,12 +310,17 @@ def main():
         env = EnvData(dataset=dat, seed=0)
         print "%s: %d frames with %d dimensions" % (dat, env.data.shape[0], env.data.shape[1])
         #chunks = env.generate_training_data(num_steps=10, num_steps_test=5, n_chunks=2)
-    for i, dataset in enumerate([Datasets.PHYSIO_EHG]):
+    for i, dataset in enumerate([Datasets.STFT1, Datasets.STFT2, Datasets.STFT3]):
         env = EnvData(dataset=dataset, seed=0)
         #plt.subplot(1, 3, i+1)
         #plt.plot(env.data)
-        print(env.generate_training_data(n_train=100, n_test=0, whitening=False)[0][0])
-    plt.show()
+        dat = env.generate_training_data(n_train=100, n_test=0, whitening=False)[0][0]
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.imshow(env.data[:1000].T, interpolation='none', cmap=plt.get_cmap('Greys'))
+        plt.subplot(1,2,2)
+        plt.imshow(np.cov(dat.T), interpolation='none', cmap=plt.get_cmap('Greys'))
+        plt.show()
         
         
 
